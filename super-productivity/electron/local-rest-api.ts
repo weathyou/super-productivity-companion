@@ -4,6 +4,7 @@ import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { randomUUID } from 'crypto';
 import { IPC } from './shared-with-frontend/ipc-events.const';
 import { getIsAppReady, getWin } from './main-window';
+import { showOrFocus } from './various-shared';
 import { GlobalConfigState } from '../src/app/features/config/global-config.model';
 import {
   LOCAL_REST_API_HOST,
@@ -23,6 +24,8 @@ const JSON_HEADERS = {
 let server: Server | null = null;
 let isInitialized = false;
 let isEnabled = false;
+let isLocalRestApiEnabled = false;
+let isDesktopCompanionEnabled = false;
 let isListening = false;
 const pendingRequests = new Map<
   string,
@@ -165,6 +168,8 @@ const handleHttpRequest = async (
 
   const requestUrl = new URL(req.url ?? '/', `http://${LOCAL_REST_API_HOST}`);
   const method = req.method ?? 'GET';
+  const isCompanionCommand =
+    method === 'POST' && requestUrl.pathname === '/companion-command';
 
   if (method === 'GET' && requestUrl.pathname === '/health') {
     writeJson(res, 200, {
@@ -172,6 +177,28 @@ const handleHttpRequest = async (
       data: {
         server: 'up',
         rendererReady: getIsAppReady(),
+      },
+    });
+    return;
+  }
+
+  if (isCompanionCommand && !isDesktopCompanionEnabled) {
+    writeJson(res, 403, {
+      ok: false,
+      error: {
+        code: 'COMPANION_DISABLED',
+        message: 'Desktop companion integration is disabled',
+      },
+    });
+    return;
+  }
+
+  if (!isLocalRestApiEnabled && !isCompanionCommand) {
+    writeJson(res, 404, {
+      ok: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Route not found',
       },
     });
     return;
@@ -200,6 +227,14 @@ const handleHttpRequest = async (
       },
     });
     return;
+  }
+
+  if (isCompanionCommand) {
+    try {
+      showOrFocus(getWin());
+    } catch (error) {
+      warn('[local-rest-api] Failed to focus app for companion command', error);
+    }
   }
 
   try {
@@ -280,7 +315,9 @@ const stopServer = (): void => {
 
 export const updateLocalRestApiConfig = (cfg: GlobalConfigState): void => {
   const isForcedForDev = isForceEnabledForDev();
-  const nextEnabled = isForcedForDev || !!cfg.misc.isLocalRestApiEnabled;
+  isLocalRestApiEnabled = isForcedForDev || !!cfg.misc.isLocalRestApiEnabled;
+  isDesktopCompanionEnabled = !!cfg.misc.isDesktopCompanionEnabled;
+  const nextEnabled = isLocalRestApiEnabled || isDesktopCompanionEnabled;
   if (nextEnabled === isEnabled) {
     if (nextEnabled && !isListening) {
       startServer();

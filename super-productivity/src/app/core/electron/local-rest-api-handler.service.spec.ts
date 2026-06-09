@@ -7,7 +7,12 @@ import { ProjectService } from '../../features/project/project.service';
 import { TagService } from '../../features/tag/tag.service';
 import { TODAY_TAG } from '../../features/tag/tag.const';
 import { DateService } from '../date/date.service';
-import { Task, TaskWithSubTasks, TaskArchive } from '../../features/tasks/task.model';
+import {
+  Task,
+  TaskArchive,
+  TaskDetailTargetPanel,
+  TaskWithSubTasks,
+} from '../../features/tasks/task.model';
 import {
   LocalRestApiRequestPayload,
   LocalRestApiResponsePayload,
@@ -111,6 +116,9 @@ describe('LocalRestApiHandlerService', () => {
         'update',
         'remove',
         'setCurrentId',
+        'setSelectedId',
+        'pauseCurrent',
+        'setDone',
         'moveToArchive',
         'restoreTask',
         'getAllTasksEverywhere',
@@ -1080,6 +1088,107 @@ describe('LocalRestApiHandlerService', () => {
       expect(response.body.ok).toBe(false);
       expect(response.status).toBe(500);
       expect((response.body as any).error.code).toBe('INTERNAL_ERROR');
+    });
+  });
+
+  describe('companion command route', () => {
+    const task = createMockTask('task-1');
+
+    beforeEach(() => {
+      Object.defineProperty(taskServiceMock, 'getByIdOnce$', {
+        value: (id: string) => of(id === 'task-1' ? task : undefined),
+      });
+    });
+
+    it('accepts openApp without mutating tasks', async () => {
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', { body: { type: 'openApp' } }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.ok).toBe(true);
+      expect(taskServiceMock.setCurrentId).not.toHaveBeenCalled();
+      expect(taskServiceMock.setDone).not.toHaveBeenCalled();
+    });
+
+    it('selects the current task for openCurrentTask', async () => {
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', {
+          body: { type: 'openCurrentTask', taskId: 'task-1' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(taskServiceMock.setSelectedId).toHaveBeenCalledWith(
+        'task-1',
+        TaskDetailTargetPanel.Default,
+      );
+    });
+
+    it('resumes a valid task', async () => {
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', {
+          body: { type: 'resumeCurrentTask', taskId: 'task-1' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(taskServiceMock.setCurrentId).toHaveBeenCalledWith('task-1');
+    });
+
+    it('pauses only when the command target matches the current task', async () => {
+      Object.defineProperty(taskServiceMock, 'currentTask$', {
+        value: of(task),
+      });
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', {
+          body: { type: 'pauseCurrentTask', taskId: 'task-1' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(taskServiceMock.pauseCurrent).toHaveBeenCalled();
+    });
+
+    it('rejects stale current-task commands', async () => {
+      Object.defineProperty(taskServiceMock, 'currentTask$', {
+        value: of(createMockTask('task-2')),
+      });
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', {
+          body: { type: 'stopCurrentTask', taskId: 'task-1' },
+        }),
+      );
+
+      expect(response.status).toBe(409);
+      expect(taskServiceMock.pauseCurrent).not.toHaveBeenCalled();
+    });
+
+    it('completes only the matching current task', async () => {
+      Object.defineProperty(taskServiceMock, 'currentTask$', {
+        value: of(task),
+      });
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', {
+          body: { type: 'completeCurrentTask', taskId: 'task-1' },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(taskServiceMock.setDone).toHaveBeenCalledWith('task-1');
+      expect(taskServiceMock.pauseCurrent).toHaveBeenCalled();
     });
   });
 });

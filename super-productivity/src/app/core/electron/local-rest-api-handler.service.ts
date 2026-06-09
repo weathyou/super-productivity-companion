@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TaskService } from '../../features/tasks/task.service';
-import { Task, TaskWithSubTasks } from '../../features/tasks/task.model';
+import {
+  Task,
+  TaskDetailTargetPanel,
+  TaskWithSubTasks,
+} from '../../features/tasks/task.model';
 import { TaskArchiveService } from '../../features/archive/task-archive.service';
 import { ProjectService } from '../../features/project/project.service';
 import { TagService } from '../../features/tag/tag.service';
@@ -115,6 +119,23 @@ type TaskSource = 'active' | 'archived' | 'all';
 const isValidTimestamp = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && new Date(value).getTime() > 0;
 
+type CompanionCommandType =
+  | 'openApp'
+  | 'openCurrentTask'
+  | 'pauseCurrentTask'
+  | 'resumeCurrentTask'
+  | 'stopCurrentTask'
+  | 'completeCurrentTask';
+
+const COMPANION_COMMAND_TYPES = new Set<string>([
+  'openApp',
+  'openCurrentTask',
+  'pauseCurrentTask',
+  'resumeCurrentTask',
+  'stopCurrentTask',
+  'completeCurrentTask',
+]);
+
 const isTaskInToday = (
   task: Task,
   todayStr: string,
@@ -173,6 +194,10 @@ export class LocalRestApiHandlerService {
 
     if (method === 'GET' && path === '/status') {
       return this._handleGetStatus(requestId);
+    }
+
+    if (method === 'POST' && path === '/companion-command') {
+      return this._handleCompanionCommand(requestId, body);
     }
 
     if (method === 'GET' && path === '/task-control/current') {
@@ -273,6 +298,78 @@ export class LocalRestApiHandlerService {
 
     this._taskService.setCurrentId(taskId);
     return createSuccessResponse(requestId, 200, { currentTaskId: taskId });
+  }
+
+  private async _handleCompanionCommand(
+    requestId: string,
+    body: unknown,
+  ): Promise<LocalRestApiResponsePayload> {
+    if (!isRecord(body) || typeof body.type !== 'string') {
+      return createErrorResponse(
+        requestId,
+        400,
+        'INVALID_INPUT',
+        'Request body must be a companion command object',
+      );
+    }
+
+    if (!COMPANION_COMMAND_TYPES.has(body.type)) {
+      return createErrorResponse(
+        requestId,
+        400,
+        'INVALID_COMMAND',
+        'Unsupported companion command type',
+      );
+    }
+
+    const type = body.type as CompanionCommandType;
+    if (type === 'openApp') {
+      return createSuccessResponse(requestId, 200, { command: type });
+    }
+
+    const taskId = body.taskId;
+    if (typeof taskId !== 'string' || !taskId) {
+      return createErrorResponse(
+        requestId,
+        400,
+        'INVALID_INPUT',
+        'taskId must be a non-empty string',
+      );
+    }
+
+    const task = await this._getTaskById(taskId);
+    if (!task) {
+      return createErrorResponse(requestId, 404, 'TASK_NOT_FOUND', 'Task not found');
+    }
+
+    if (type === 'openCurrentTask') {
+      this._taskService.setSelectedId(taskId, TaskDetailTargetPanel.Default);
+      return createSuccessResponse(requestId, 200, { taskId, command: type });
+    }
+
+    if (type === 'resumeCurrentTask') {
+      this._taskService.setCurrentId(taskId);
+      return createSuccessResponse(requestId, 200, { currentTaskId: taskId });
+    }
+
+    const currentTask = await firstValueFrom(this._taskService.currentTask$);
+    if (currentTask?.id !== taskId) {
+      return createErrorResponse(
+        requestId,
+        409,
+        'CURRENT_TASK_MISMATCH',
+        'Command target is not the current task',
+      );
+    }
+
+    if (type === 'pauseCurrentTask' || type === 'stopCurrentTask') {
+      this._taskService.pauseCurrent();
+      return createSuccessResponse(requestId, 200, { currentTaskId: null });
+    }
+
+    this._taskService.setDone(taskId);
+    this._taskService.pauseCurrent();
+    return createSuccessResponse(requestId, 200, { taskId, isDone: true });
   }
 
   private async _handleListTasks(

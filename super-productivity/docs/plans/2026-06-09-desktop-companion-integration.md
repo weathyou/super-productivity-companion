@@ -1,7 +1,7 @@
 # Desktop Companion Integration
 
 **Date:** 2026-06-09
-**Status:** Phase 1 implemented and manually verified
+**Status:** Phase 1 implemented and manually verified; Phase 2 command bridge started
 **Scope:** Product and architecture plan for integrating Super Productivity with the Clawd desktop companion.
 
 ## Implementation progress
@@ -32,7 +32,7 @@ Phase 1 manual verification:
 
 - Real two-app manual loop completed with Clawd UI visible and Super Productivity desktop publishing enabled.
 - Companion visual state changes were confirmed for start, pause, stop, and task switch.
-- Decide whether the Phase 1 "open Super Productivity" action belongs in this first PR or the next small slice.
+- The "open Super Productivity" action is deferred to Phase 2 together with companion commands.
 
 ## Context
 
@@ -242,10 +242,11 @@ type CompanionCommand =
   | { type: 'openCurrentTask'; taskId: string }
   | { type: 'pauseCurrentTask'; taskId: string }
   | { type: 'resumeCurrentTask'; taskId: string }
-  | { type: 'stopCurrentTask'; taskId: string };
+  | { type: 'stopCurrentTask'; taskId: string }
+  | { type: 'completeCurrentTask'; taskId: string };
 ```
 
-Phase 1 should only implement `openApp` if a command path is included at all. Task mutation commands belong to Phase 2.
+Phase 1 should not include a command path. `openApp` and task mutation commands belong to Phase 2.
 
 Failure behavior:
 
@@ -430,7 +431,7 @@ The first implementation should be intentionally small:
 3. Add a local bridge that publishes the latest snapshot when those fields change.
 4. Add a Clawd productivity state input that stores the latest snapshot separately from agent session state.
 5. Map `working`, `paused`, `idle`, and `break` to existing Clawd visual states.
-6. Add a companion action to open Super Productivity.
+6. Defer companion actions to Phase 2.
 
 Do not include quick add, reminders, finish-day summary, project/tag visuals, or task completion in the first slice. Those are good features, but they should come after the snapshot contract is proven.
 
@@ -460,7 +461,7 @@ Recommended implementation order:
 3. Implement the Super Productivity state builder with unit tests and no network publishing.
 4. Add the Super Productivity publisher behind an opt-in setting.
 5. Wire the publisher to the Clawd endpoint and verify the full local loop.
-6. Add the "open Super Productivity" companion action only after the display path is stable.
+6. Start Phase 2 companion commands only after the display path is stable.
 
 Stop after each step if the previous step is not demonstrably working. This integration crosses two mature apps; narrow checkpoints matter more than speed.
 
@@ -488,7 +489,7 @@ Scope:
 - Current task.
 - Timer running/paused/stopped.
 - Break or idle mode.
-- Open Super Productivity from the companion.
+- No companion commands; `openApp` and task commands are deferred to Phase 2.
 
 Verification:
 
@@ -590,4 +591,14 @@ Verification:
 - Local Clawd discovery and POST to `http://127.0.0.1:23333/productivity-state` were verified from the Electron bridge.
 - Runtime smoke from the Super Productivity renderer produced a `working` snapshot with current task and timer data, and the Electron bridge returned `ok: true`.
 - Real two-app visual verification passed for start, pause, stop, and task switch.
-- Remaining decision before Phase 2: whether "open Super Productivity" belongs in Phase 1 follow-up or in the Phase 2 command slice.
+- Decision: `openApp`, `pauseCurrentTask`, `resumeCurrentTask`, `stopCurrentTask`, `completeCurrentTask`, and `openCurrentTask` all belong in Phase 2 "Companion commands".
+
+## 2026-06-09 Phase 2 checkpoint
+
+- Super Productivity now exposes a narrow `POST /companion-command` route while desktop companion publishing is enabled.
+- The local server may start for companion commands without enabling the broader local REST API surface.
+- `openApp` focuses Super Productivity through the Electron main process and performs no task mutation.
+- `openCurrentTask`, `resumeCurrentTask`, `pauseCurrentTask`, `stopCurrentTask`, and `completeCurrentTask` are handled by Super Productivity-owned task services.
+- Current-task mutation commands reject stale `taskId` values when the command target no longer matches the active task.
+- Clawd now has a small command client for `http://127.0.0.1:3876/companion-command`.
+- Clawd tray and pet context menus expose a Super Productivity command submenu based on the latest productivity snapshot.
