@@ -1,0 +1,24 @@
+{
+  "id": "linear-issue-provider",
+  "name": "Linear",
+  "version": "1.0.0",
+  "manifestVersion": 1,
+  "minSupVersion": "18.0.0",
+  "description": "Linear issue provider plugin",
+  "author": "Super Productivity",
+  "type": "issueProvider",
+  "icon": "icon.svg",
+  "iFrame": false,
+  "permissions": [],
+  "hooks": [],
+  "issueProvider": {
+    "pollIntervalMs": 300000,
+    "icon": "linear",
+    "humanReadableName": "Linear",
+    "issueProviderKey": "LINEAR",
+    "issueStrings": {
+      "singular": "Issue",
+      "plural": "Issues"
+    }
+  }
+}

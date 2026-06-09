@@ -1,0 +1,554 @@
+@use '../../../../styles/_globals.scss' as *;
+
+:host {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding-top: var(--s2);
+  padding-bottom: var(--s2);
+
+  --muted-opacity: 0;
+}
+
+// Mode selector at the top (Preparation state)
+.focus-mode-select-mode {
+  position: absolute;
+  top: var(--s2);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-focus-mode-main-selector);
+  padding: 0 var(--s2);
+  max-width: 600px;
+}
+
+.mode-settings-btn {
+  position: absolute;
+  bottom: calc(var(--clock-face-size) * 0.05);
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: var(--muted-opacity);
+  transition: var(--transition-standard);
+  pointer-events: auto;
+
+  &:hover,
+  .clock-face:hover & {
+    opacity: 1;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    opacity: 1;
+  }
+}
+
+// ========== CENTER BLOCK (Preparation & In Progress) ==========
+.center-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+// ========== TASK SECTION ==========
+.task-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-direction: column;
+  width: calc(100% - var(--s2));
+  max-width: var(--component-max-width);
+  min-width: 0;
+  margin: var(--s) auto;
+
+  &:hover button {
+    opacity: 1;
+  }
+
+  button {
+    opacity: var(--muted-opacity);
+    transition: var(--transition-standard);
+    pointer-events: auto;
+
+    @media (hover: none) and (pointer: coarse) {
+      /* styles for primary touch devices go here */
+      opacity: 1;
+    }
+  }
+}
+
+// ========== TASK ACTIONS (below title) ==========
+.task-actions {
+  display: flex;
+  gap: var(--s);
+  justify-content: center;
+}
+
+.task-title,
+.task-title-placeholder {
+  text-align: center;
+  font-size: 30px;
+  line-height: 1.5;
+  border-radius: var(--card-border-radius);
+  border: 1px solid transparent;
+  margin: 0;
+  padding: var(--s-half);
+
+  @include mq(xs, max) {
+    font-size: 24px;
+  }
+
+  @include mq(xxxs, max) {
+    font-size: 18px;
+  }
+}
+
+.parent-title {
+  text-align: center;
+  margin-bottom: 6px;
+  opacity: 0.8;
+  font-size: 15px;
+  line-height: 1.2;
+  max-width: 90%;
+  overflow-wrap: break-word;
+
+  @include mq(xs, max) {
+    font-size: 12px;
+  }
+
+  @include mq(xxxs, max) {
+    font-size: 10px;
+  }
+}
+
+.task-title {
+  width: 100%;
+  max-width: 100%;
+  max-height: min(24vh, 8em);
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  ::ng-deep textarea {
+    text-align: center;
+  }
+
+  &.is-focused {
+    outline: 1px solid var(--c-accent);
+  }
+}
+
+.task-title-placeholder {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: var(--transition-standard);
+  padding: var(--s-half);
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+// Task switch button no longer needed in task section (moved to task-actions)
+
+// ========== CLOCK DISPLAY ==========
+.clock-display {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--s2);
+
+  // Sizing tokens — scoped here so both .clock-face and the overlayed
+  // duration slider can share the same diameter. --control-offset is the
+  // distance the in-circle controls (pause/done/+/-) sit from the rim;
+  // larger circles allow tucking them slightly further inward.
+  --clock-face-size: 175px;
+  --clock-time-size: 34px;
+  --control-offset: 10px;
+
+  @media (min-height: 600px) and (min-width: 600px) {
+    --clock-face-size: 282px;
+    --clock-time-size: 68px;
+    --control-offset: 20px;
+  }
+
+  &__content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: var(--s1);
+  }
+}
+
+.clock-face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--clock-face-size);
+  height: var(--clock-face-size);
+
+  &__layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+    transition: var(--transition-standard);
+
+    &.is-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+}
+
+// Breathing dot (flow mode) — sized just under the clock face so the task
+// title / "Select task to focus" placeholder above it stays easy to spot.
+breathing-dot {
+  --breathing-dot-size: calc(var(--clock-face-size) * 0.8);
+}
+
+.focus-progress-circle {
+  width: 100%;
+  height: 100%;
+
+  &__bg {
+    fill: none;
+    stroke: var(--progress-bg, rgba(255, 255, 255, 0.15));
+    stroke-width: 1.8;
+  }
+
+  &__progress {
+    fill: none;
+    stroke: var(--c-primary);
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.3s ease;
+  }
+}
+
+.clock-time {
+  font-size: var(--clock-time-size, 52px);
+  font-weight: bold;
+  // Locked line-height + tabular digits so the ticking countdown doesn't
+  // shift width or vertical metrics mid-session.
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  // Optical centering: Roboto Bold digits sit slightly below the line-box
+  // center, so a plain 50/50 translate looks bottom-heavy. Nudging up by
+  // ~4% of the font-size brings the digits to the visual middle of the
+  // clock face (~3px at 72px, scales with breakpoint).
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% - 0.05em));
+}
+
+.overtime-msg {
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+
+// Duration slider overlays the clock face so the selector fills the full
+// circle during countdown preparation.
+.duration-slider-overlay-wrapper {
+  position: absolute;
+  top: calc(var(--clock-face-size) * 0.5);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-focus-mode-duration-slider);
+  pointer-events: auto;
+}
+
+.duration-slider-overlay {
+  --input-duration-slider-size: var(--clock-face-size);
+  // Scale the editable duration text with the circle so it's readable on
+  // large screens; ~16% of diameter keeps proportions close to the clock-time.
+  --input-duration-slider-value-size: calc(var(--clock-face-size) * 0.16);
+  display: flex;
+  justify-content: center;
+}
+
+// When the duration slider is showing (countdown prep), hide the clock
+// digits — the slider's own value display takes over. Toggled by a class
+// bound to isShowDurationSlider() in the template.
+.clock-display__content.is-duration-slider-active .clock-time {
+  visibility: hidden;
+}
+
+// ========== CLOCK WRAPPER (In Progress state) ==========
+.clock-wrapper {
+  @include center;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  // --control-offset declared on .clock-display so it can be tuned per
+  // breakpoint. The earlier formula derived it from font-size and ended up
+  // pushing controls over the digits at larger sizes. See #7403.
+
+  &:hover button {
+    opacity: 1;
+  }
+
+  button {
+    opacity: var(--muted-opacity);
+    transition: var(--transition-standard);
+    pointer-events: auto;
+
+    @media (hover: none) and (pointer: coarse) {
+      /* styles for primary touch devices go here */
+      opacity: 1;
+    }
+  }
+
+  .time-adjust-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .time-adjust-btn--decrease {
+    left: var(--control-offset);
+  }
+
+  .time-adjust-btn--increase {
+    right: var(--control-offset);
+  }
+
+  // Pause/Resume button inside the circle (top center)
+  .pause-resume-btn {
+    position: absolute;
+    top: var(--control-offset);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  // Complete session button inside the circle (bottom center)
+  .complete-session-btn {
+    position: absolute;
+    bottom: var(--control-offset);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+// ========== PLAY BUTTON ==========
+.play-button {
+  margin-top: var(--s2);
+  width: 64px;
+  height: 64px;
+
+  mat-icon {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+  }
+}
+
+// ========== SIMPLE COUNTER BUTTONS (In Progress) ==========
+.simple-counter-buttons {
+  display: flex;
+  position: absolute;
+  top: calc(var(--s2) + 80px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-focus-mode-simple-counter);
+  gap: var(--s);
+
+  simple-counter-button.isHiddenWithoutFocus {
+    @include mousePrimaryDevice {
+      transition: var(--transition-standard);
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+    }
+
+    :host:hover & {
+      transition: var(--transition-standard);
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+  }
+}
+
+// ========== CONTROLS (In Progress) ==========
+.bottom-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  bottom: calc(var(--s2) + var(--safe-area-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+
+  @include mousePrimaryDevice {
+    transition: all var(--transition-leave);
+    opacity: 0;
+  }
+
+  :host:hover & {
+    transition: all var(--transition-enter);
+    opacity: 1;
+  }
+
+  a {
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
+    color: inherit;
+  }
+
+  a,
+  button {
+    width: 56px !important;
+    height: 56px !important;
+    position: relative;
+
+    mat-icon {
+      font-size: 32px !important;
+      width: 32px !important;
+      height: 32px !important;
+    }
+
+    .extend-label {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      background: var(--c-accent);
+      color: var(--c-on-accent);
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: bold;
+      line-height: 1;
+    }
+  }
+}
+
+// ========== NOTES AND ATTACHMENTS ==========
+.notes-and-attachments {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+}
+
+.notes-panel {
+  border-radius: var(--card-border-radius);
+  margin: auto;
+  padding: var(--s2);
+  width: 100%;
+  flex-grow: 1;
+  max-width: var(--component-max-width);
+  min-height: 60px;
+  max-height: 50vh;
+  display: flex;
+
+  inline-markdown {
+    max-height: 100%;
+    width: 100%;
+    @include noteStyle;
+    display: flex;
+
+    ::ng-deep .markdown-wrapper {
+      width: 100%;
+      overflow: auto;
+      height: auto !important;
+    }
+
+    ::ng-deep .markdown-parsed,
+    ::ng-deep textarea {
+      min-height: 60px;
+    }
+
+    ::ng-deep textarea {
+      width: 100%;
+      background: inherit;
+      color: inherit;
+      border: none;
+      box-sizing: border-box;
+      overflow-wrap: break-word;
+      display: block;
+      resize: none;
+      min-height: 60px;
+      overflow: auto;
+      padding: var(--s) var(--s2);
+
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+}
+
+.attachment-list-wrapper {
+  margin-top: var(--s);
+  max-width: 100vw;
+  padding: 0 var(--s);
+  overflow-x: auto;
+  min-height: 111px;
+
+  @include mousePrimaryDevice {
+    visibility: hidden;
+  }
+
+  :host:hover & {
+    visibility: visible;
+  }
+
+  ::ng-deep ul {
+    display: block;
+    white-space: nowrap;
+    text-align: center;
+    margin: 0;
+
+    li {
+      display: inline-block;
+    }
+  }
+}
+
+.drag-over-msg {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  opacity: 1;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  display: flex;
+  z-index: var(--z-focus-mode-drag-over);
+}
+
+.hide-notes-btn {
+  position: absolute;
+  z-index: var(--z-focus-mode-hide-notes);
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+}

@@ -1,0 +1,62 @@
+<div
+  #wrapperEl
+  [class.isHideOverflow]="isHideOverflow()"
+  class="markdown-wrapper"
+  spResolveClipboardImages
+>
+  @if (isShowEdit() || !isMarkdownFormattingEnabled()) {
+    <textarea
+      #textareaEl
+      (blur)="untoggleShowEdit(); setBlur($event)"
+      (focus)="setFocus($event)"
+      (input)="resizeTextareaToFit()"
+      (keydown)="keypressHandler($event)"
+      (keypress)="keypressHandler($event)"
+      (paste)="pasteHandler($event)"
+      [@fadeIn]
+      [ngModel]="modelCopy()"
+      [placeholder]="placeholderTxt() ?? ''"
+      class="mat-body-2 markdown-unparsed"
+      rows="1"
+    ></textarea>
+  }
+
+  <!--  (focus)="clickOrFocusPreview($event, true)"-->
+  @if (!isTurnOffMarkdownParsing()) {
+    <markdown
+      #previewEl
+      (click)="clickPreview($event)"
+      [data]="resolvedMarkdownData"
+      [disableSanitizer]="true"
+      [class.preview-while-editing]="isShowEdit()"
+      class="mat-body-2 markdown-parsed markdown"
+      tabindex="0"
+    ></markdown>
+  }
+</div>
+
+@if (isShowControls()) {
+  <div class="controls">
+    <ng-content> </ng-content>
+
+    @if (isShowChecklistToggle() && isMarkdownFormattingEnabled()) {
+      <!--  -->
+      <button
+        [matTooltip]="'Add checklist item'"
+        (mousedown)="$event.preventDefault()"
+        (click)="toggleChecklistMode($event)"
+        mat-icon-button
+      >
+        <mat-icon>checklist</mat-icon>
+      </button>
+    }
+    <button
+      [matTooltip]="'Open in fullscreen'"
+      (mousedown)="$event.preventDefault()"
+      (click)="openFullScreen()"
+      mat-icon-button
+    >
+      <mat-icon>fullscreen</mat-icon>
+    </button>
+  </div>
+}

@@ -1,0 +1,7 @@
+**/node_modules/
+**/dist/
+**/out/
+**/.angular/
+**/coverage/
+**/.env
+**/.env.*
