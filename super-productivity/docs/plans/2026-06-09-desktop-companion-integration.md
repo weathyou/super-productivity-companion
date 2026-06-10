@@ -1,7 +1,7 @@
 # Desktop Companion Integration
 
 **Date:** 2026-06-09
-**Status:** Phase 1 implemented and manually verified; Phase 2 command bridge implemented; Phase 3 visual signals started
+**Status:** Phase 1 manually verified; Phase 2-4 implemented and covered by focused automated tests; Phase 2-4 real two-app manual verification pending
 **Scope:** Product and architecture plan for integrating Super Productivity with the Clawd desktop companion.
 
 ## Implementation progress
@@ -18,6 +18,9 @@ Updated on 2026-06-09:
 - Super Productivity publishes complete snapshots through a narrow Electron IPC bridge.
 - The Electron main process discovers Clawd through `~/.clawd/runtime.json` plus ports `23333-23337`, then posts to `/productivity-state`.
 - The publisher debounces state changes, skips duplicate snapshots, fails quietly when Clawd is unavailable, and disables the session on a confirmed Clawd schema mismatch.
+- Super Productivity exposes a narrow `POST /companion-command` route for `openApp`, current-task open/pause/resume/stop/complete, and `quickAddTask`.
+- Clawd sends companion commands through the integrated `clawd-on-desk/` command client and exposes them from the tray and pet context menus.
+- Clawd tray and pet context menus show a compact read-only day summary when Super Productivity publishes `day` data.
 
 Verified so far:
 
@@ -29,12 +32,21 @@ Verified so far:
 - Clawd full test suite passed after repairing Electron.
 - A real Clawd Electron server smoke test accepted `POST /productivity-state` on `127.0.0.1:23333`.
 - The compiled Super Productivity Electron publisher successfully discovered the real Clawd runtime file and published a snapshot to the real Clawd server.
+- Focused Clawd command client, menu, productivity route, and state tests passed for Phase 2-4 behavior.
+- Focused Super Productivity local companion command and desktop companion state builder specs passed for Phase 2-4 behavior.
+- Super Productivity `electron:build` passed after the Phase 2-4 changes.
 
 Phase 1 manual verification:
 
 - Real two-app manual loop completed with Clawd UI visible and Super Productivity desktop publishing enabled.
 - Companion visual state changes were confirmed for start, pause, stop, and task switch.
 - The "open Super Productivity" action is deferred to Phase 2 together with companion commands.
+
+Phase 2-4 manual verification still needed:
+
+- Trigger Clawd menu commands against a running Super Productivity desktop app and confirm open app, open task, pause, resume, stop, complete, and quick add each cause one expected Super Productivity-owned state change.
+- Confirm reminder attention, overdue, finished-day, and compact day summary display in the real Clawd UI with real Super Productivity data.
+- Confirm the bridge still fails quietly when either desktop app is closed during Phase 2-4 command and display flows.
 
 ## Context
 
