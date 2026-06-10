@@ -100,6 +100,11 @@ describe("menu send-to-display", () => {
         state: {
           mode: "working",
           currentTask: { id: "task-1", title: "Demo task" },
+          day: {
+            plannedTaskCount: 5,
+            completedTaskCount: 2,
+            totalTrackedMs: 4500000,
+          },
         },
       }),
       sendCompanionCommand: (command) => {
@@ -115,12 +120,15 @@ describe("menu send-to-display", () => {
     const item = ctx.contextMenu.template.find((entry) => entry.label === "Super Productivity");
     assert.ok(item, "context menu should expose Super Productivity commands");
     const openApp = item.submenu.find((entry) => entry.label === "Open Super Productivity");
+    const daySummary = item.submenu.find((entry) => entry.label && entry.label.startsWith("Today:"));
     const quickAdd = item.submenu.find((entry) => entry.label === "Quick Add Task from Clipboard");
     const pause = item.submenu.find((entry) => entry.label === "Pause Current Task");
     const resume = item.submenu.find((entry) => entry.label === "Resume Current Task");
     const complete = item.submenu.find((entry) => entry.label === "Complete Current Task");
 
     assert.strictEqual(openApp.enabled, undefined);
+    assert.strictEqual(daySummary.label, "Today: 2/5 done - 1h 15m");
+    assert.strictEqual(daySummary.enabled, false);
     assert.strictEqual(quickAdd.enabled, true);
     assert.strictEqual(pause.enabled, true);
     assert.strictEqual(resume.enabled, false);
@@ -156,12 +164,14 @@ describe("menu send-to-display", () => {
     const item = ctx.contextMenu.template.find((entry) => entry.label === "Super Productivity");
     assert.ok(item, "context menu should expose Super Productivity commands");
     const openApp = item.submenu.find((entry) => entry.label === "Open Super Productivity");
+    const daySummary = item.submenu.find((entry) => entry.label && entry.label.startsWith("Today:"));
     const quickAdd = item.submenu.find((entry) => entry.label === "Quick Add Task from Clipboard");
     const taskItems = item.submenu.filter(
       (entry) => entry.label && entry.label.includes("Current Task"),
     );
 
     assert.strictEqual(openApp.enabled, undefined);
+    assert.strictEqual(daySummary, undefined);
     assert.strictEqual(quickAdd.enabled, false);
     assert.ok(taskItems.every((entry) => entry.enabled === false));
 

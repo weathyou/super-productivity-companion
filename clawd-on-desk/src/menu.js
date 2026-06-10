@@ -90,6 +90,27 @@ module.exports = function initMenu(ctx) {
     return String(ctx.readClipboardText() || "").trim();
   }
 
+  function formatTrackedMs(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return "0m";
+    const totalMinutes = Math.max(1, Math.round(ms / 60000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (!hours) return `${minutes}m`;
+    return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+
+  function buildDaySummaryMenuItem(snapshot) {
+    const day = snapshot && snapshot.state && snapshot.state.day;
+    if (!day) return null;
+    const planned = Number.isFinite(day.plannedTaskCount) ? day.plannedTaskCount : 0;
+    const completed = Number.isFinite(day.completedTaskCount) ? day.completedTaskCount : 0;
+    const tracked = formatTrackedMs(day.totalTrackedMs);
+    return {
+      label: `Today: ${completed}/${planned} done - ${tracked}`,
+      enabled: false,
+    };
+  }
+
   function buildProductivityCommandMenuItem() {
     const snapshot = getProductivitySnapshot();
     const task = getProductivityCurrentTask();
@@ -98,48 +119,53 @@ module.exports = function initMenu(ctx) {
     const isWorking = mode === "working";
     const canTargetTask = !!taskId;
     const quickAddTitle = getQuickAddClipboardTitle();
+    const daySummaryItem = buildDaySummaryMenuItem(snapshot);
+    const submenu = [
+      {
+        label: "Open Super Productivity",
+        click: () => sendProductivityCommand({ type: "openApp" }),
+      },
+    ];
+    if (daySummaryItem) submenu.push(daySummaryItem);
+    submenu.push(
+      {
+        label: "Quick Add Task from Clipboard",
+        enabled: !!quickAddTitle,
+        click: () => sendProductivityCommand({
+          type: "quickAddTask",
+          title: quickAddTitle,
+        }),
+      },
+      {
+        label: "Open Current Task",
+        enabled: canTargetTask,
+        click: () => sendProductivityCommand({ type: "openCurrentTask", taskId }),
+      },
+      { type: "separator" },
+      {
+        label: "Resume Current Task",
+        enabled: canTargetTask && !isWorking,
+        click: () => sendProductivityCommand({ type: "resumeCurrentTask", taskId }),
+      },
+      {
+        label: "Pause Current Task",
+        enabled: canTargetTask && isWorking,
+        click: () => sendProductivityCommand({ type: "pauseCurrentTask", taskId }),
+      },
+      {
+        label: "Stop Current Task",
+        enabled: canTargetTask,
+        click: () => sendProductivityCommand({ type: "stopCurrentTask", taskId }),
+      },
+      {
+        label: "Complete Current Task",
+        enabled: canTargetTask,
+        click: () => sendProductivityCommand({ type: "completeCurrentTask", taskId }),
+      },
+    );
     return {
       label: "Super Productivity",
-      submenu: [
-        {
-          label: "Open Super Productivity",
-          click: () => sendProductivityCommand({ type: "openApp" }),
-        },
-        {
-          label: "Quick Add Task from Clipboard",
-          enabled: !!quickAddTitle,
-          click: () => sendProductivityCommand({
-            type: "quickAddTask",
-            title: quickAddTitle,
-          }),
-        },
-        {
-          label: "Open Current Task",
-          enabled: canTargetTask,
-          click: () => sendProductivityCommand({ type: "openCurrentTask", taskId }),
-        },
-        { type: "separator" },
-        {
-          label: "Resume Current Task",
-          enabled: canTargetTask && !isWorking,
-          click: () => sendProductivityCommand({ type: "resumeCurrentTask", taskId }),
-        },
-        {
-          label: "Pause Current Task",
-          enabled: canTargetTask && isWorking,
-          click: () => sendProductivityCommand({ type: "pauseCurrentTask", taskId }),
-        },
-        {
-          label: "Stop Current Task",
-          enabled: canTargetTask,
-          click: () => sendProductivityCommand({ type: "stopCurrentTask", taskId }),
-        },
-        {
-          label: "Complete Current Task",
-          enabled: canTargetTask,
-          click: () => sendProductivityCommand({ type: "completeCurrentTask", taskId }),
-        },
-      ],
+      submenu,
     };
   }
 

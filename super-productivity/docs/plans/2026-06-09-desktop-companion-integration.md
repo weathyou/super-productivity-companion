@@ -642,4 +642,5 @@ Verification:
 - Super Productivity accepts `quickAddTask` through `POST /companion-command` and creates the task via `TaskService.add(title, false)`, preserving the active work-context defaults owned by Super Productivity.
 - Clawd command client sanitizes `quickAddTask` titles and sends them through the existing companion command path.
 - Clawd tray and pet context menus expose `Quick Add Task from Clipboard`, enabled only when the clipboard has non-empty text.
+- Clawd tray and pet context menus show a compact read-only day summary when Super Productivity publishes `day` data.
 - Focused Super Productivity local REST specs and Clawd command/menu tests passed after these changes.
