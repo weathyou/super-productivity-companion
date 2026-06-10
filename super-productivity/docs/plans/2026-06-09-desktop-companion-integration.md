@@ -707,3 +707,17 @@ Verification:
 - Real Super Productivity `POST /companion-command` calls passed for `openApp`, `quickAddTask`, `openCurrentTask`, `resumeCurrentTask`, `pauseCurrentTask`, `stopCurrentTask`, and `completeCurrentTask`. The quick-add verification task was created as `8QNuNgWscoShyeqL8Idlq`, resumed, paused, resumed, stopped, resumed, and completed through Super Productivity-owned task APIs.
 - A direct POST to Clawd's real `http://127.0.0.1:23334/productivity-state` route with a `working` state and `day` summary returned `200 { ok: true, acceptedSchemaVersion: 1 }`, confirming the GUI Clawd instance accepts the Phase 1/3 state contract.
 - Remaining visual-only checks: capture explicit screenshots or manual notes for Clawd's animated working/paused/attention states and tray/context-menu day summary display. The command and bridge contracts are verified, but the visible animation/menu evidence should still be collected before calling the whole companion integration fully accepted.
+
+## 2026-06-10 visual verification checkpoint
+
+- The isolated GUI launcher now starts Clawd with `--remote-debugging-port=9334` and verifies that port is free before launch. This is limited to the verification launcher and gives repeatable renderer-level evidence for transparent Clawd windows.
+- GUI session `C:\Users\haozhewang\AppData\Local\Temp\sp-companion-gui-20260610-140748` exposed the Clawd renderer page at `http://127.0.0.1:9334/json` with `title: "Clawd"` and `url: file:///D:/AI_coding/super-productivity-companion/clawd-on-desk/src/index.html`.
+- CDP screenshots were captured under `...\visual-evidence-cdp\` for `idle`, `working`, `attention`, and `paused-after-delay`.
+- Renderer state evidence from the same CDP session:
+  - `idle` -> `currentState: "idle"`, `currentDisplayedSvg: "clawd-idle-follow.svg"`.
+  - `working` -> `currentState: "working"`, `currentDisplayedSvg: "clawd-working-typing.svg"`.
+  - `attention` -> `currentState: "notification"`, `currentDisplayedSvg: "clawd-notification.svg"`.
+  - `paused` -> after the theme's minimum notification display delay, `currentState: "idle"`, `currentDisplayedSvg: "clawd-idle-follow.svg"`.
+- A direct native-screen crop of transparent Clawd windows was not usable because Windows captured the background behind the transparent Electron window. CDP renderer screenshots are the authoritative visual evidence for the animated state mapping.
+- A menu-template snapshot generated from the real `clawd-on-desk/src/menu.js` with a working productivity snapshot was saved to `...\visual-evidence-cdp\clawd-menu-template-snapshot.json`.
+- The menu snapshot includes the Super Productivity submenu in both context and tray menus, the read-only day summary `Today: 2/5 done - 1h 15m`, enabled `Quick Add Task from Clipboard`, `Open Current Task`, `Pause Current Task`, `Stop Current Task`, and `Complete Current Task`, and disabled `Resume Current Task` while the task is already working.

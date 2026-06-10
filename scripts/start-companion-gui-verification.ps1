@@ -101,6 +101,7 @@ $($details -join [Environment]::NewLine)
 
 Assert-PortAvailable 4200 "the integrated Super Productivity Angular dev server"
 Assert-PortAvailable 3876 "the isolated Super Productivity companion command server"
+Assert-PortAvailable 9334 "the isolated Clawd renderer verification debugger"
 
 New-Item -ItemType Directory -Force -Path `
   $HomeDir, `
@@ -166,7 +167,7 @@ Write-Launcher `
   -Path $ClawdLauncher `
   -WorkingDirectory $ClawdRoot `
   -CommandLines @(
-    'npm.cmd start'
+    'npm.cmd start -- --remote-debugging-port=9334'
   )
 
 Set-Content -Path $ChecklistPath -Encoding UTF8 -Value @"
