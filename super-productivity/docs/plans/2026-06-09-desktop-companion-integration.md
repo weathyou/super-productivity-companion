@@ -35,6 +35,7 @@ Verified so far:
 - Focused Clawd command client, menu, productivity route, and state tests passed for Phase 2-4 behavior.
 - Focused Super Productivity local companion command and desktop companion state builder specs passed for Phase 2-4 behavior.
 - Super Productivity `electron:build` passed after the Phase 2-4 changes.
+- `npm.cmd run verify:super-productivity-companion` in `clawd-on-desk/` passes a repeatable bridge smoke test: it starts the real Clawd HTTP server module, posts a Super Productivity snapshot to `/productivity-state`, verifies Clawd runtime state, and confirms Clawd command-client POST payloads against a fake Super Productivity `/companion-command` receiver.
 
 Phase 1 manual verification:
 
@@ -656,3 +657,11 @@ Verification:
 - Clawd tray and pet context menus expose `Quick Add Task from Clipboard`, enabled only when the clipboard has non-empty text.
 - Clawd tray and pet context menus show a compact read-only day summary when Super Productivity publishes `day` data.
 - Focused Super Productivity local REST specs and Clawd command/menu tests passed after these changes.
+
+## 2026-06-10 bridge smoke checkpoint
+
+- Added `clawd-on-desk/scripts/verify-super-productivity-companion.js` and the package script `npm.cmd run verify:super-productivity-companion`.
+- The smoke test starts the real Clawd server module on a temporary local port with test runtime-config hooks.
+- It posts a full Super Productivity productivity snapshot to `/productivity-state` and verifies the accepted Clawd response, server header, runtime port status, visual state mapping, current task, day summary data, and unsupported-schema rejection.
+- It starts a fake Super Productivity `/companion-command` receiver and verifies that Clawd sends sanitized `openApp`, `pauseCurrentTask`, and `quickAddTask` commands while rejecting invalid commands locally.
+- This does not replace the remaining visible two-app GUI verification, but it covers the cross-process HTTP contract in a repeatable automated check.
