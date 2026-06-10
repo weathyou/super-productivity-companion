@@ -7,11 +7,7 @@ import { ProjectService } from '../../features/project/project.service';
 import { TagService } from '../../features/tag/tag.service';
 import { TODAY_TAG } from '../../features/tag/tag.const';
 import { DateService } from '../date/date.service';
-import {
-  Task,
-  TaskArchive,
-  TaskWithSubTasks,
-} from '../../features/tasks/task.model';
+import { Task, TaskArchive, TaskWithSubTasks } from '../../features/tasks/task.model';
 import {
   LocalRestApiRequestPayload,
   LocalRestApiResponsePayload,
