@@ -25,6 +25,11 @@ export interface ProductivityCompanionState {
     startedAt?: number;
     elapsedToday?: number;
   };
+  nextReminder?: {
+    taskId?: string;
+    title: string;
+    dueAt: number;
+  };
   day?: {
     plannedTaskCount: number;
     completedTaskCount: number;

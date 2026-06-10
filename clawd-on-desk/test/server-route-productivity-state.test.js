@@ -65,6 +65,11 @@ describe("sanitizeProductivityState", () => {
         isRunning: true,
         elapsedToday: 120000,
       },
+      nextReminder: {
+        taskId: " task-2 ",
+        title: " Reminder\u0000 title ",
+        dueAt: 1781000000000,
+      },
       day: {
         plannedTaskCount: 3,
         completedTaskCount: 2,
@@ -83,6 +88,11 @@ describe("sanitizeProductivityState", () => {
       timer: {
         isRunning: true,
         elapsedToday: 120000,
+      },
+      nextReminder: {
+        title: "Reminder  title",
+        dueAt: 1781000000000,
+        taskId: "task-2",
       },
       day: {
         plannedTaskCount: 3,

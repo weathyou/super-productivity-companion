@@ -35,6 +35,7 @@ describe('buildProductivityCompanionState', () => {
         currentTask: null,
         allTasks: [],
         today: '2026-06-09',
+        now: 1781000000000,
         isBreakActive: false,
         isTimerPaused: false,
       }),
@@ -46,6 +47,7 @@ describe('buildProductivityCompanionState', () => {
       currentTask: createTask(),
       allTasks: [createTask()],
       today: '2026-06-09',
+      now: 1781000000000,
       isBreakActive: false,
       isTimerPaused: false,
     });
@@ -77,6 +79,7 @@ describe('buildProductivityCompanionState', () => {
       currentTask: createTask(),
       allTasks: [createTask()],
       today: '2026-06-09',
+      now: 1781000000000,
       isBreakActive: true,
       isTimerPaused: false,
     });
@@ -90,6 +93,7 @@ describe('buildProductivityCompanionState', () => {
       currentTask: createTask(),
       allTasks: [createTask()],
       today: '2026-06-09',
+      now: 1781000000000,
       isBreakActive: false,
       isTimerPaused: true,
     });
@@ -103,6 +107,7 @@ describe('buildProductivityCompanionState', () => {
       currentTask: null,
       allTasks: [createTask({ dueDay: '2026-06-08', timeSpentOnDay: {} })],
       today: '2026-06-09',
+      now: 1781000000000,
       isBreakActive: false,
       isTimerPaused: false,
     });
@@ -121,6 +126,7 @@ describe('buildProductivityCompanionState', () => {
         }),
       ],
       today: '2026-06-09',
+      now: 1781000000000,
       isBreakActive: false,
       isTimerPaused: false,
     });
@@ -131,6 +137,41 @@ describe('buildProductivityCompanionState', () => {
       completedTaskCount: 1,
       totalTrackedMs: 120000,
     });
+  });
+
+  it('maps a recently active reminder to attention and includes reminder context', () => {
+    const now = 1781000000000;
+    const state = buildProductivityCompanionState({
+      currentTask: createTask(),
+      allTasks: [createTask({ remindAt: now - 60_000 })],
+      today: '2026-06-09',
+      now,
+      isBreakActive: false,
+      isTimerPaused: false,
+    });
+
+    expect(state.mode).toBe('attention');
+    expect(state.nextReminder).toEqual({
+      taskId: 'task-1',
+      title: 'Demo task',
+      dueAt: now - 60_000,
+    });
+    expect(state.currentTask?.id).toBe('task-1');
+  });
+
+  it('includes the next upcoming reminder without changing the work mode', () => {
+    const now = 1781000000000;
+    const state = buildProductivityCompanionState({
+      currentTask: createTask(),
+      allTasks: [createTask({ remindAt: now + 60_000 })],
+      today: '2026-06-09',
+      now,
+      isBreakActive: false,
+      isTimerPaused: false,
+    });
+
+    expect(state.mode).toBe('working');
+    expect(state.nextReminder?.dueAt).toBe(now + 60_000);
   });
 });
 

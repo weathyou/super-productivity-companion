@@ -1,4 +1,4 @@
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TaskService } from '../../features/tasks/task.service';
 import { FocusModeService } from '../../features/focus-mode/focus-mode.service';
@@ -6,6 +6,9 @@ import { DateService } from '../date/date.service';
 import { Task } from '../../features/tasks/task.model';
 import { ProductivityCompanionState } from '../../../../electron/shared-with-frontend/desktop-companion.model';
 import { getDbDateStr } from '../../util/get-db-date-str';
+
+const REMINDER_TICK_MS = 30_000;
+const REMINDER_ATTENTION_WINDOW_MS = 5 * 60_000;
 
 const finitePositiveOrZero = (value: number | undefined | null): number | undefined =>
   value !== null && value !== undefined && Number.isFinite(value) && value >= 0
@@ -60,16 +63,54 @@ const buildDaySummary = (tasks: Task[], today: string): ProductivityCompanionSta
   };
 };
 
+const buildReminderCandidates = (
+  tasks: Task[],
+): NonNullable<ProductivityCompanionState['nextReminder']>[] =>
+  tasks
+    .filter((task) => !task.isDone)
+    .flatMap((task) => {
+      const candidates: NonNullable<ProductivityCompanionState['nextReminder']>[] = [];
+      const remindAt = finitePositiveOrZero(task.remindAt);
+      if (remindAt !== undefined) {
+        candidates.push({
+          taskId: task.id,
+          title: task.title,
+          dueAt: remindAt,
+        });
+      }
+      const deadlineRemindAt = finitePositiveOrZero(task.deadlineRemindAt);
+      if (deadlineRemindAt !== undefined) {
+        candidates.push({
+          taskId: task.id,
+          title: task.title,
+          dueAt: deadlineRemindAt,
+        });
+      }
+      return candidates;
+    })
+    .sort((a, b) => a.dueAt - b.dueAt);
+
+const getActiveReminder = (
+  reminders: NonNullable<ProductivityCompanionState['nextReminder']>[],
+  now: number,
+): ProductivityCompanionState['nextReminder'] =>
+  reminders.find(
+    (reminder) =>
+      reminder.dueAt <= now && now - reminder.dueAt <= REMINDER_ATTENTION_WINDOW_MS,
+  );
+
 export const buildProductivityCompanionState = ({
   currentTask,
   allTasks,
   today,
+  now,
   isBreakActive,
   isTimerPaused,
 }: {
   currentTask: Task | null;
   allTasks: Task[];
   today: string;
+  now: number;
   isBreakActive: boolean;
   isTimerPaused: boolean;
 }): ProductivityCompanionState => {
@@ -78,10 +119,16 @@ export const buildProductivityCompanionState = ({
   const isRunning = !!currentTask && !isBreakActive && !isTimerPaused;
   const day = buildDaySummary(allTasks, today);
   const hasOverdueTasks = allTasks.some((task) => isTaskOverdue(task, today));
+  const reminderCandidates = buildReminderCandidates(allTasks);
+  const activeReminder = getActiveReminder(reminderCandidates, now);
+  const nextReminder =
+    activeReminder ?? reminderCandidates.find((reminder) => reminder.dueAt > now);
 
   const state: ProductivityCompanionState = {
     mode: isBreakActive
       ? 'break'
+      : activeReminder
+        ? 'attention'
       : currentTask
         ? isRunning
           ? 'working'
@@ -95,6 +142,9 @@ export const buildProductivityCompanionState = ({
 
   if (day) {
     state.day = day;
+  }
+  if (nextReminder) {
+    state.nextReminder = nextReminder;
   }
 
   if (currentTask) {
@@ -133,6 +183,8 @@ export class DesktopCompanionStateBuilderService {
   private readonly _taskService = inject(TaskService);
   private readonly _focusModeService = inject(FocusModeService);
   private readonly _dateService = inject(DateService);
+  private readonly _destroyRef = inject(DestroyRef);
+  private readonly _now = signal(Date.now());
 
   private readonly _currentTask = toSignal(this._taskService.currentTask$, {
     initialValue: null,
@@ -141,11 +193,19 @@ export class DesktopCompanionStateBuilderService {
     initialValue: [],
   });
 
+  constructor() {
+    const intervalId = window.setInterval(() => {
+      this._now.set(Date.now());
+    }, REMINDER_TICK_MS);
+    this._destroyRef.onDestroy(() => window.clearInterval(intervalId));
+  }
+
   readonly state = computed(() =>
     buildProductivityCompanionState({
       currentTask: this._currentTask(),
       allTasks: this._allTasks(),
       today: this._dateService.todayStr(),
+      now: this._now(),
       isBreakActive: this._focusModeService.isBreakActive(),
       isTimerPaused: this._focusModeService.isSessionPaused(),
     }),

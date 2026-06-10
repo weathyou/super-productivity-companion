@@ -13,7 +13,7 @@ Updated on 2026-06-09:
 - Clawd maps productivity modes to display states and falls back after a stale timeout.
 - Clawd maps `overdue` to notification and `finishedDay` to attention for Phase 3 visual nudges.
 - Super Productivity has a Phase 1 snapshot builder for `mode`, `currentTask`, and `timer`.
-- Super Productivity snapshots now include a lightweight `day` summary and derive `overdue` / `finishedDay` modes when no task is active.
+- Super Productivity snapshots now include a lightweight `day` summary, `nextReminder`, and derive `attention` / `overdue` / `finishedDay` modes.
 - Super Productivity has an opt-in desktop-only setting for companion publishing.
 - Super Productivity publishes complete snapshots through a narrow Electron IPC bridge.
 - The Electron main process discovers Clawd through `~/.clawd/runtime.json` plus ports `23333-23337`, then posts to `/productivity-state`.
@@ -626,9 +626,12 @@ Verification:
 ## 2026-06-10 Phase 3 checkpoint
 
 - Super Productivity desktop companion snapshots include `day.plannedTaskCount`, `day.completedTaskCount`, and `day.totalTrackedMs`.
+- Super Productivity desktop companion snapshots include `nextReminder` with `taskId`, `title`, and `dueAt` for the active or next upcoming task/deadline reminder.
+- A recently due reminder drives `attention` mode for a short window, with a lightweight 30-second builder tick so future reminders can become active without another task edit.
 - When no task is active, Super Productivity derives `overdue` if any active task is due or has a deadline before the logical today string.
 - When no task is active and all planned/touched tasks for the logical day are complete, Super Productivity derives `finishedDay`.
-- Active work, paused work, and break mode still take precedence over overdue and finished-day visual nudges.
+- Break mode still takes precedence over reminder attention; active work and paused work take precedence over overdue and finished-day visual nudges.
 - Clawd preserves the `day` summary from `/productivity-state`.
+- Clawd preserves `nextReminder` from `/productivity-state`.
 - Clawd maps `overdue` to `notification` and `finishedDay` to `attention`; existing theme minimum-display behavior can delay lower-priority visual transitions briefly.
 - Focused Super Productivity builder specs, local companion command specs, Clawd productivity route/state/menu/client tests, and `electron:build` passed after these changes.

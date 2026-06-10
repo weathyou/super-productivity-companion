@@ -73,6 +73,17 @@ function sanitizeTimer(value) {
   return out;
 }
 
+function sanitizeNextReminder(value) {
+  if (!isPlainObject(value)) return undefined;
+  const title = sanitizeString(value.title, 240);
+  const dueAt = sanitizeNumber(value.dueAt);
+  if (!title || dueAt === undefined || dueAt < 0) return undefined;
+  const out = { title, dueAt };
+  const taskId = sanitizeString(value.taskId, 160);
+  if (taskId) out.taskId = taskId;
+  return out;
+}
+
 function sanitizeDay(value) {
   if (!isPlainObject(value)) return undefined;
   const plannedTaskCount = sanitizeNumber(value.plannedTaskCount);
@@ -101,6 +112,8 @@ function sanitizeProductivityState(value) {
   if (currentTask) out.currentTask = currentTask;
   const timer = sanitizeTimer(value.timer);
   if (timer) out.timer = timer;
+  const nextReminder = sanitizeNextReminder(value.nextReminder);
+  if (nextReminder) out.nextReminder = nextReminder;
   const day = sanitizeDay(value.day);
   if (day) out.day = day;
   return out;
