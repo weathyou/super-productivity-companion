@@ -1,6 +1,7 @@
 param(
   [string] $SessionRoot = "",
-  [switch] $SkipElectronBuild
+  [switch] $SkipElectronBuild,
+  [switch] $StopConflictingPorts
 )
 
 $ErrorActionPreference = "Stop"
@@ -63,6 +64,25 @@ function Assert-PortAvailable {
   $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
   if (-not $listeners) {
     return
+  }
+
+  if ($StopConflictingPorts) {
+    $listeners |
+      Select-Object -ExpandProperty OwningProcess -Unique |
+      Where-Object { $_ -and $_ -ne $PID } |
+      ForEach-Object {
+        $owner = Get-CimInstance Win32_Process -Filter "ProcessId=$_" -ErrorAction SilentlyContinue
+        $commandLine = if ($owner) { $owner.CommandLine } else { "(process details unavailable)" }
+        Write-Host "Stopping PID $_ on port $Port for $Purpose"
+        Write-Host $commandLine
+        Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue
+      }
+
+    Start-Sleep -Seconds 2
+    $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+    if (-not $listeners) {
+      return
+    }
   }
 
   $details = $listeners | ForEach-Object {
