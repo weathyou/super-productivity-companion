@@ -52,6 +52,36 @@ if ($missingDeps.Count) {
   throw ($missingDeps -join [Environment]::NewLine)
 }
 
+function Assert-PortAvailable {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int] $Port,
+    [Parameter(Mandatory = $true)]
+    [string] $Purpose
+  )
+
+  $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+  if (-not $listeners) {
+    return
+  }
+
+  $details = $listeners | ForEach-Object {
+    $owner = Get-CimInstance Win32_Process -Filter "ProcessId=$($_.OwningProcess)" -ErrorAction SilentlyContinue
+    $commandLine = if ($owner) { $owner.CommandLine } else { "(process details unavailable)" }
+    "PID $($_.OwningProcess) on $($_.LocalAddress):$Port - $commandLine"
+  }
+
+  throw @"
+Port $Port is already in use, but it is required for $Purpose.
+Close the process using the port before starting isolated GUI verification.
+
+$($details -join [Environment]::NewLine)
+"@
+}
+
+Assert-PortAvailable 4200 "the integrated Super Productivity Angular dev server"
+Assert-PortAvailable 3876 "the isolated Super Productivity companion command server"
+
 New-Item -ItemType Directory -Force -Path `
   $HomeDir, `
   $AppData, `
