@@ -7,6 +7,7 @@ import {
 import { TaskReminderOptionId } from '../tasks/task.model';
 import { GlobalConfigState } from './global-config.model';
 import { INBOX_PROJECT } from '../project/project.const';
+import { getEnvOptional } from '../../util/env';
 
 const minute = 60 * 1000;
 const defaultTaskNotesTemplate = `**How can I best achieve it now?**
@@ -15,6 +16,7 @@ const defaultTaskNotesTemplate = `**How can I best achieve it now?**
 
 **Why do I want it?**
 `;
+const isCompanionRelease = getEnvOptional('SP_COMPANION_RELEASE') === '1';
 
 export const DEFAULT_DAY_START = '9:00';
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfigState = {
@@ -53,7 +55,7 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfigState = {
     isConfirmBeforeExitWithoutFinishDay: true,
     isMinimizeToTray: false,
     isLocalRestApiEnabled: false,
-    isDesktopCompanionEnabled: false,
+    isDesktopCompanionEnabled: isCompanionRelease,
     isTrayShowCurrentCountdown: true,
     startOfNextDay: 0,
     startOfNextDayTime: '00:00',

@@ -1,0 +1,78 @@
+name: Release Windows Companion
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without leading v, for manual runs"
+        required: false
+        default: "0.0.0-manual"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-companion:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
+      - name: Install Super Productivity dependencies
+        working-directory: super-productivity
+        run: npm.cmd ci
+
+      - name: Build Super Productivity companion Windows installers
+        working-directory: super-productivity
+        env:
+          SP_COMPANION_RELEASE: "1"
+        run: |
+          npm.cmd run buildAllElectron:noTests:prod
+          npx electron-builder --win nsis:x64 nsis:arm64 --publish never
+
+      - name: Install Clawd dependencies
+        working-directory: clawd-on-desk
+        run: npm.cmd ci
+
+      - name: Test and build Clawd Windows installers
+        working-directory: clawd-on-desk
+        run: |
+          npm.cmd test
+          npm.cmd run fetch:sidecars -- --target windows-x64,windows-arm64
+          node scripts/verify-sidecar-binaries.js prebuild:win:all
+          npx electron-builder --win nsis:x64 nsis:arm64 --publish never
+
+      - name: Package combined installers
+        env:
+          PACKAGE_VERSION: ${{ github.event.inputs.version || github.ref_name }}
+        run: |
+          $version = "$env:PACKAGE_VERSION" -replace '^v', ''
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-windows-companion-release.ps1 -Version $version
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-companion-release
+          path: release-artifacts/*
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
+          body_path: release-artifacts/release-notes.md
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

@@ -33,6 +33,7 @@ const REQUIRED_ENV_KEYS = [
 // Define optional keys that might be provided
 // These can be accessed with getEnvOptional() without strict typing
 const OPTIONAL_ENV_KEYS = [
+  'SP_COMPANION_RELEASE',
   'UNSPLASH_KEY',
   'UNSPLASH_CLIENT_ID',
   'ONEDRIVE_CLIENT_ID',
