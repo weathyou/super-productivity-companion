@@ -721,3 +721,8 @@ Verification:
 - A direct native-screen crop of transparent Clawd windows was not usable because Windows captured the background behind the transparent Electron window. CDP renderer screenshots are the authoritative visual evidence for the animated state mapping.
 - A menu-template snapshot generated from the real `clawd-on-desk/src/menu.js` with a working productivity snapshot was saved to `...\visual-evidence-cdp\clawd-menu-template-snapshot.json`.
 - The menu snapshot includes the Super Productivity submenu in both context and tray menus, the read-only day summary `Today: 2/5 done - 1h 15m`, enabled `Quick Add Task from Clipboard`, `Open Current Task`, `Pause Current Task`, `Stop Current Task`, and `Complete Current Task`, and disabled `Resume Current Task` while the task is already working.
+- Final end-to-end GUI session `C:\Users\haozhewang\AppData\Local\Temp\sp-companion-gui-20260610-142248` verified the full Super Productivity -> Clawd renderer path, not only direct Clawd state POSTs.
+- In that session, real Super Productivity `POST /companion-command` created task `3mwuX8GXPVUYA4ZWpZxU_`, resumed it, paused it, resumed it again, and completed it. CDP evidence was saved under `...\end-to-end-evidence\summary.json`.
+- After `resumeCurrentTask`, Clawd renderer reported `currentState: "working"` and `currentDisplayedSvg: "clawd-working-typing.svg"`.
+- After `pauseCurrentTask` and the theme minimum-display delay, Clawd renderer reported `currentState: "idle"` and `currentDisplayedSvg: "clawd-idle-follow.svg"`.
+- After `completeCurrentTask` and the theme minimum-display delay, Clawd renderer reported `currentState: "attention"` and `currentDisplayedSvg: "clawd-happy.svg"`.
