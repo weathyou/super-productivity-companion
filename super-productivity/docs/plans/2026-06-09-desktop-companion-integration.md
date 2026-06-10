@@ -37,6 +37,7 @@ Verified so far:
 - Super Productivity `electron:build` passed after the Phase 2-4 changes.
 - `npm.cmd run verify:super-productivity-companion` in `clawd-on-desk/` passes a repeatable bridge smoke test: it starts the real Clawd HTTP server module, posts a Super Productivity snapshot to `/productivity-state`, verifies Clawd runtime state, and confirms Clawd command-client POST payloads against a fake Super Productivity `/companion-command` receiver.
 - `npm.cmd run test:electron` in `super-productivity/` now covers the main-process local REST server path for desktop companion commands: enabling the companion starts the server, `POST /companion-command` is focused and forwarded to the renderer over IPC, disabled companion commands return 403, and broader local REST routes remain disabled when only the companion integration is enabled.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify-companion-integration.ps1` from the integrated project root runs the companion integration gate across both codebases.
 
 Phase 1 manual verification:
 
@@ -674,3 +675,9 @@ Verification:
 - It verifies `POST /companion-command` is rejected with `COMPANION_DISABLED` while the local REST API is enabled but desktop companion integration is disabled.
 - It verifies enabling only desktop companion integration keeps broader local REST routes unavailable while allowing companion commands.
 - It verifies companion command requests call the app focus path and are forwarded to the renderer through `LOCAL_REST_API_REQUEST`, with the renderer response returned to the HTTP client.
+
+## 2026-06-10 integrated verification gate
+
+- Added `scripts/verify-companion-integration.ps1` at the integrated project root.
+- The gate runs Clawd's companion bridge smoke test, Clawd's focused route/menu/command/state tests, Super Productivity Electron main-process tests, Super Productivity companion command handler specs, state builder specs, publisher specs, and `electron:build`.
+- The gate passed locally on 2026-06-10 and is the preferred automated check before visible two-app GUI verification.
