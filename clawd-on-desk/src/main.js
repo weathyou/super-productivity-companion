@@ -2499,6 +2499,7 @@ const _menuCtx = {
   getMiniMode: () => _mini.getMiniMode(),
   getMiniTransitioning: () => _mini.getMiniTransitioning(),
   getProductivityState: () => _state.getProductivityState(),
+  readClipboardText: () => clipboard.readText(),
   sendCompanionCommand: (command) => {
     const { sendCompanionCommand } = require("./productivity-command-client");
     return sendCompanionCommand(command);

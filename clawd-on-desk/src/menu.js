@@ -85,6 +85,11 @@ module.exports = function initMenu(ctx) {
     });
   }
 
+  function getQuickAddClipboardTitle() {
+    if (typeof ctx.readClipboardText !== "function") return "";
+    return String(ctx.readClipboardText() || "").trim();
+  }
+
   function buildProductivityCommandMenuItem() {
     const snapshot = getProductivitySnapshot();
     const task = getProductivityCurrentTask();
@@ -92,12 +97,21 @@ module.exports = function initMenu(ctx) {
     const mode = snapshot && snapshot.state ? snapshot.state.mode : null;
     const isWorking = mode === "working";
     const canTargetTask = !!taskId;
+    const quickAddTitle = getQuickAddClipboardTitle();
     return {
       label: "Super Productivity",
       submenu: [
         {
           label: "Open Super Productivity",
           click: () => sendProductivityCommand({ type: "openApp" }),
+        },
+        {
+          label: "Quick Add Task from Clipboard",
+          enabled: !!quickAddTitle,
+          click: () => sendProductivityCommand({
+            type: "quickAddTask",
+            title: quickAddTitle,
+          }),
         },
         {
           label: "Open Current Task",

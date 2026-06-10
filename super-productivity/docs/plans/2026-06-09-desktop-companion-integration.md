@@ -254,6 +254,7 @@ Command body:
 ```typescript
 type CompanionCommand =
   | { type: 'openApp' }
+  | { type: 'quickAddTask'; title: string }
   | { type: 'openCurrentTask'; taskId: string }
   | { type: 'pauseCurrentTask'; taskId: string }
   | { type: 'resumeCurrentTask'; taskId: string }
@@ -635,3 +636,10 @@ Verification:
 - Clawd preserves `nextReminder` from `/productivity-state`.
 - Clawd maps `overdue` to `notification` and `finishedDay` to `attention`; existing theme minimum-display behavior can delay lower-priority visual transitions briefly.
 - Focused Super Productivity builder specs, local companion command specs, Clawd productivity route/state/menu/client tests, and `electron:build` passed after these changes.
+
+## 2026-06-10 Phase 4 checkpoint
+
+- Super Productivity accepts `quickAddTask` through `POST /companion-command` and creates the task via `TaskService.add(title, false)`, preserving the active work-context defaults owned by Super Productivity.
+- Clawd command client sanitizes `quickAddTask` titles and sends them through the existing companion command path.
+- Clawd tray and pet context menus expose `Quick Add Task from Clipboard`, enabled only when the clipboard has non-empty text.
+- Focused Super Productivity local REST specs and Clawd command/menu tests passed after these changes.

@@ -59,6 +59,7 @@ function buildBaseCtx(overrides = {}) {
     flushRuntimeStateToPrefs: () => {},
     reapplyMacVisibility: () => {},
     clampToScreenVisual: (x, y) => ({ x, y }),
+    readClipboardText: () => "",
     ...overrides,
   };
   return ctx;
@@ -105,6 +106,7 @@ describe("menu send-to-display", () => {
         commands.push(command);
         return Promise.resolve({ ok: true });
       },
+      readClipboardText: () => " Clipboard task ",
     });
 
     const menu = initMenu(ctx);
@@ -113,21 +115,25 @@ describe("menu send-to-display", () => {
     const item = ctx.contextMenu.template.find((entry) => entry.label === "Super Productivity");
     assert.ok(item, "context menu should expose Super Productivity commands");
     const openApp = item.submenu.find((entry) => entry.label === "Open Super Productivity");
+    const quickAdd = item.submenu.find((entry) => entry.label === "Quick Add Task from Clipboard");
     const pause = item.submenu.find((entry) => entry.label === "Pause Current Task");
     const resume = item.submenu.find((entry) => entry.label === "Resume Current Task");
     const complete = item.submenu.find((entry) => entry.label === "Complete Current Task");
 
     assert.strictEqual(openApp.enabled, undefined);
+    assert.strictEqual(quickAdd.enabled, true);
     assert.strictEqual(pause.enabled, true);
     assert.strictEqual(resume.enabled, false);
     assert.strictEqual(complete.enabled, true);
 
     openApp.click();
+    quickAdd.click();
     pause.click();
     complete.click();
 
     assert.deepStrictEqual(commands, [
       { type: "openApp" },
+      { type: "quickAddTask", title: "Clipboard task" },
       { type: "pauseCurrentTask", taskId: "task-1" },
       { type: "completeCurrentTask", taskId: "task-1" },
     ]);
@@ -150,9 +156,13 @@ describe("menu send-to-display", () => {
     const item = ctx.contextMenu.template.find((entry) => entry.label === "Super Productivity");
     assert.ok(item, "context menu should expose Super Productivity commands");
     const openApp = item.submenu.find((entry) => entry.label === "Open Super Productivity");
-    const taskItems = item.submenu.filter((entry) => entry.label && entry.label !== "Open Super Productivity");
+    const quickAdd = item.submenu.find((entry) => entry.label === "Quick Add Task from Clipboard");
+    const taskItems = item.submenu.filter(
+      (entry) => entry.label && entry.label.includes("Current Task"),
+    );
 
     assert.strictEqual(openApp.enabled, undefined);
+    assert.strictEqual(quickAdd.enabled, false);
     assert.ok(taskItems.every((entry) => entry.enabled === false));
 
     openApp.click();

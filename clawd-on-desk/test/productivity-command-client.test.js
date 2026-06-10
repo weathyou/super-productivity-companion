@@ -45,12 +45,20 @@ describe("productivity-command-client", () => {
     });
   });
 
+  it("sanitizes quickAddTask title without a task id", () => {
+    assert.deepStrictEqual(sanitizeCommand({ type: "quickAddTask", title: "  New task  " }), {
+      type: "quickAddTask",
+      title: "New task",
+    });
+    assert.strictEqual(sanitizeCommand({ type: "quickAddTask", title: "   " }), null);
+  });
+
   it("rejects task commands without task ids", () => {
     assert.strictEqual(sanitizeCommand({ type: "pauseCurrentTask" }), null);
     assert.strictEqual(sanitizeCommand({ type: "not-real", taskId: "task-1" }), null);
   });
 
-  it("posts companion commands to Super Productivity", async () => {
+  it("posts companion task commands to Super Productivity", async () => {
     let captured = null;
     const port = await listen((req, res) => {
       assert.strictEqual(req.method, "POST");
@@ -77,6 +85,33 @@ describe("productivity-command-client", () => {
     });
     assert.strictEqual(result.ok, true);
     assert.strictEqual(result.statusCode, 200);
+  });
+
+  it("posts quick add commands to Super Productivity", async () => {
+    let captured = null;
+    const port = await listen((req, res) => {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += String(chunk);
+      });
+      req.on("end", () => {
+        captured = JSON.parse(body);
+        res.writeHead(201, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true, data: { taskId: "new-task-id" } }));
+      });
+    });
+
+    const result = await sendCompanionCommand(
+      { type: "quickAddTask", title: " Clipboard task " },
+      { port },
+    );
+
+    assert.deepStrictEqual(captured, {
+      type: "quickAddTask",
+      title: "Clipboard task",
+    });
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.statusCode, 201);
   });
 
   it("does not send invalid commands", async () => {

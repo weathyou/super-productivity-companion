@@ -118,6 +118,7 @@ const isValidTimestamp = (value: unknown): value is number =>
 
 type CompanionCommandType =
   | 'openApp'
+  | 'quickAddTask'
   | 'openCurrentTask'
   | 'pauseCurrentTask'
   | 'resumeCurrentTask'
@@ -126,6 +127,7 @@ type CompanionCommandType =
 
 const COMPANION_COMMAND_TYPES = new Set<string>([
   'openApp',
+  'quickAddTask',
   'openCurrentTask',
   'pauseCurrentTask',
   'resumeCurrentTask',
@@ -323,6 +325,20 @@ export class LocalRestApiHandlerService {
     const type = body.type as CompanionCommandType;
     if (type === 'openApp') {
       return createSuccessResponse(requestId, 200, { command: type });
+    }
+
+    if (type === 'quickAddTask') {
+      if (typeof body.title !== 'string' || !body.title.trim()) {
+        return createErrorResponse(
+          requestId,
+          400,
+          'INVALID_INPUT',
+          'title must be a non-empty string',
+        );
+      }
+      const taskId = this._taskService.add(body.title.trim(), false);
+      const createdTask = await this._getTaskById(taskId);
+      return createSuccessResponse(requestId, 201, { taskId, task: createdTask });
     }
 
     const taskId = body.taskId;

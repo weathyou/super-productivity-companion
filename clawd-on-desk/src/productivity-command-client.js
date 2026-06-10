@@ -7,9 +7,11 @@ const SUPER_PRODUCTIVITY_PORT = 3876;
 const COMPANION_COMMAND_PATH = "/companion-command";
 const REQUEST_TIMEOUT_MS = 1000;
 const MAX_RESPONSE_BYTES = 8192;
+const QUICK_ADD_TITLE_MAX_LENGTH = 500;
 
 const VALID_COMMAND_TYPES = new Set([
   "openApp",
+  "quickAddTask",
   "openCurrentTask",
   "pauseCurrentTask",
   "resumeCurrentTask",
@@ -24,6 +26,13 @@ function isPlainObject(value) {
 function sanitizeCommand(command) {
   if (!isPlainObject(command) || !VALID_COMMAND_TYPES.has(command.type)) return null;
   if (command.type === "openApp") return { type: "openApp" };
+  if (command.type === "quickAddTask") {
+    if (typeof command.title !== "string" || !command.title.trim()) return null;
+    return {
+      type: "quickAddTask",
+      title: command.title.trim().slice(0, QUICK_ADD_TITLE_MAX_LENGTH),
+    };
+  }
   if (typeof command.taskId !== "string" || !command.taskId.trim()) return null;
   return {
     type: command.type,
@@ -111,6 +120,7 @@ module.exports = {
   SUPER_PRODUCTIVITY_HOST,
   SUPER_PRODUCTIVITY_PORT,
   COMPANION_COMMAND_PATH,
+  QUICK_ADD_TITLE_MAX_LENGTH,
   VALID_COMMAND_TYPES,
   sanitizeCommand,
   sendCompanionCommand,

@@ -1120,6 +1120,38 @@ describe('LocalRestApiHandlerService', () => {
       expect(taskServiceMock.setDone).not.toHaveBeenCalled();
     });
 
+    it('creates a task for quickAddTask', async () => {
+      (taskServiceMock as any).add.and.returnValue('new-task-id');
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', {
+          body: { type: 'quickAddTask', title: ' Quick task ' },
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      expect(taskServiceMock.add).toHaveBeenCalledWith('Quick task', false);
+      expect(response.body.ok).toBe(true);
+      if (!response.body.ok) {
+        throw new Error(`Expected success response, got ${response.body.error.code}`);
+      }
+      expect((response.body.data as { taskId: string }).taskId).toBe('new-task-id');
+    });
+
+    it('rejects quickAddTask without a title', async () => {
+      service.init();
+
+      const response = await sendRequestAndWait(
+        createRequest('POST', '/companion-command', {
+          body: { type: 'quickAddTask', title: '   ' },
+        }),
+      );
+
+      expect(response.status).toBe(400);
+      expect(taskServiceMock.add).not.toHaveBeenCalled();
+    });
+
     it('navigates to the current task for openCurrentTask', async () => {
       service.init();
 
