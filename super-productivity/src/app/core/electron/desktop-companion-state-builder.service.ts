@@ -39,7 +39,10 @@ const isTaskOverdue = (task: Task, today: string): boolean =>
     isBeforeToday(task.deadlineDay, today) ||
     isBeforeToday(getTaskDateStr(task.deadlineWithTime), today));
 
-const buildDaySummary = (tasks: Task[], today: string): ProductivityCompanionState['day'] => {
+const buildDaySummary = (
+  tasks: Task[],
+  today: string,
+): ProductivityCompanionState['day'] => {
   const tasksWithTimeToday = tasks.filter((task) =>
     getExplicitTimeSpentToday(task, today),
   );
@@ -129,15 +132,17 @@ export const buildProductivityCompanionState = ({
       ? 'break'
       : activeReminder
         ? 'attention'
-      : currentTask
-        ? isRunning
-          ? 'working'
-          : 'paused'
-        : hasOverdueTasks
-          ? 'overdue'
-          : day && day.plannedTaskCount > 0 && day.completedTaskCount === day.plannedTaskCount
-            ? 'finishedDay'
-        : 'idle',
+        : currentTask
+          ? isRunning
+            ? 'working'
+            : 'paused'
+          : hasOverdueTasks
+            ? 'overdue'
+            : day &&
+                day.plannedTaskCount > 0 &&
+                day.completedTaskCount === day.plannedTaskCount
+              ? 'finishedDay'
+              : 'idle',
   };
 
   if (day) {
