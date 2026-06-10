@@ -24,6 +24,7 @@ describe('DesktopCompanionPublisherService', () => {
 
     (window as unknown as { ea: typeof window.ea }).ea = {
       publishDesktopCompanionState: publishSpy,
+      isDesktopCompanionForceEnabled: () => false,
     } as unknown as typeof window.ea;
 
     TestBed.configureTestingModule({
@@ -56,6 +57,18 @@ describe('DesktopCompanionPublisherService', () => {
     TestBed.inject(DesktopCompanionPublisherService).init();
 
     misc.set({ isDesktopCompanionEnabled: true });
+    tick(500);
+
+    expect(publishSpy).toHaveBeenCalledOnceWith({ mode: 'idle' });
+  }));
+
+  it('publishes the snapshot when the DEV force flag is exposed by electron', fakeAsync(() => {
+    (window as unknown as { ea: typeof window.ea }).ea = {
+      ...window.ea,
+      isDesktopCompanionForceEnabled: () => true,
+    };
+    TestBed.inject(DesktopCompanionPublisherService).init();
+
     tick(500);
 
     expect(publishSpy).toHaveBeenCalledOnceWith({ mode: 'idle' });

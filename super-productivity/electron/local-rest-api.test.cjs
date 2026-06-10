@@ -15,6 +15,8 @@ let appReady;
 let sentToRenderer;
 let focusCalls;
 let warnCalls;
+let originalNodeEnv;
+let originalForceDesktopCompanion;
 
 const resetModule = () => {
   delete require.cache[localRestApiModulePath];
@@ -172,6 +174,9 @@ const waitForServer = async () => {
 };
 
 test.beforeEach(() => {
+  originalNodeEnv = process.env.NODE_ENV;
+  originalForceDesktopCompanion = process.env.SP_FORCE_DESKTOP_COMPANION;
+  delete process.env.SP_FORCE_DESKTOP_COMPANION;
   ipcResponseHandler = null;
   appReady = true;
   sentToRenderer = [];
@@ -181,6 +186,16 @@ test.beforeEach(() => {
 });
 
 test.afterEach(() => {
+  if (originalNodeEnv === undefined) {
+    delete process.env.NODE_ENV;
+  } else {
+    process.env.NODE_ENV = originalNodeEnv;
+  }
+  if (originalForceDesktopCompanion === undefined) {
+    delete process.env.SP_FORCE_DESKTOP_COMPANION;
+  } else {
+    process.env.SP_FORCE_DESKTOP_COMPANION = originalForceDesktopCompanion;
+  }
   Module._load = originalModuleLoad;
   resetModule();
 });
@@ -239,6 +254,70 @@ test('desktop companion command starts the local server and forwards through ren
     assert.equal(broaderRouteDisabled.status, 404);
     assert.equal(warnCalls.length, 0);
   } finally {
+    updateLocalRestApiConfig(makeConfig());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+});
+
+test('DEV desktop companion force flag starts command server even when config is disabled', async (t) => {
+  if (!(await isPortFree())) {
+    t.skip(`127.0.0.1:${LOCAL_REST_API_PORT} is already in use`);
+    return;
+  }
+
+  process.env.NODE_ENV = 'DEV';
+  process.env.SP_FORCE_DESKTOP_COMPANION = '1';
+  const { initLocalRestApi, updateLocalRestApiConfig } = require(localRestApiModulePath);
+
+  try {
+    initLocalRestApi();
+    await waitForServer();
+
+    updateLocalRestApiConfig(makeConfig({ localRest: false, companion: false }));
+
+    const accepted = await requestJson({
+      method: 'POST',
+      path: '/companion-command',
+      body: { type: 'openApp' },
+    });
+
+    assert.equal(accepted.status, 202);
+    assert.deepEqual(accepted.body, {
+      ok: true,
+      data: { acceptedType: 'openApp' },
+    });
+    assert.equal(focusCalls, 1);
+  } finally {
+    delete process.env.SP_FORCE_DESKTOP_COMPANION;
+    updateLocalRestApiConfig(makeConfig());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+});
+
+test('DEV desktop companion force flag enables command gate during init', async (t) => {
+  if (!(await isPortFree())) {
+    t.skip(`127.0.0.1:${LOCAL_REST_API_PORT} is already in use`);
+    return;
+  }
+
+  process.env.NODE_ENV = 'DEV';
+  process.env.SP_FORCE_DESKTOP_COMPANION = '1';
+  const { initLocalRestApi, updateLocalRestApiConfig } = require(localRestApiModulePath);
+
+  try {
+    initLocalRestApi();
+    await waitForServer();
+
+    const accepted = await requestJson({
+      method: 'POST',
+      path: '/companion-command',
+      body: { type: 'openApp' },
+    });
+
+    assert.equal(accepted.status, 202);
+    assert.equal(accepted.body.data.acceptedType, 'openApp');
+  } finally {
+    delete process.env.SP_FORCE_DESKTOP_COMPANION;
     updateLocalRestApiConfig(makeConfig());
     await new Promise((resolve) => setTimeout(resolve, 50));
   }

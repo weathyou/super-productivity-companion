@@ -111,6 +111,8 @@ export interface ElectronAPI {
 
   isFlatpak(): boolean;
 
+  isDesktopCompanionForceEnabled(): boolean;
+
   // CLIPBOARD IMAGES
   // ----------------
   saveClipboardImage(

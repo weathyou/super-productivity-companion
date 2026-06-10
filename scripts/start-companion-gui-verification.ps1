@@ -158,6 +158,7 @@ Write-Launcher `
   -WorkingDirectory $SuperProductivityRoot `
   -CommandLines @(
     '$env:NODE_ENV = "DEV"',
+    '$env:SP_FORCE_DESKTOP_COMPANION = "1"',
     "& .\node_modules\.bin\electron.cmd . --user-data-dir='$($SuperProductivityUserData.Replace("'", "''"))'"
   )
 
@@ -219,7 +220,20 @@ $frontendProcess = Start-Process `
   -WorkingDirectory $SuperProductivityRoot `
   -PassThru
 
-Start-Sleep -Seconds 8
+$frontendReady = $false
+$frontendStartedAt = Get-Date
+while (((Get-Date) - $frontendStartedAt).TotalSeconds -lt 120) {
+  try {
+    Invoke-WebRequest -Uri "http://localhost:4200" -UseBasicParsing -TimeoutSec 3 | Out-Null
+    $frontendReady = $true
+    break
+  } catch {
+    Start-Sleep -Seconds 2
+  }
+}
+if (-not $frontendReady) {
+  throw "Super Productivity Angular dev server did not become reachable at http://localhost:4200 within 120 seconds."
+}
 
 $superProductivityProcess = Start-Process `
   -FilePath "powershell.exe" `

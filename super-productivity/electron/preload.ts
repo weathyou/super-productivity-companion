@@ -109,6 +109,8 @@ const ea: ElectronAPI = {
   isAppleSilicon: () => process.platform === 'darwin' && process.arch === 'arm64',
   isSnap: () => process && process.env && !!process.env.SNAP,
   isFlatpak: () => process && process.env && !!process.env.FLATPAK_ID,
+  isDesktopCompanionForceEnabled: () =>
+    process.env.NODE_ENV === 'DEV' && process.env.SP_FORCE_DESKTOP_COMPANION === '1',
 
   // CLIPBOARD IMAGES
   // ----------------

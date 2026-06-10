@@ -118,8 +118,11 @@ const ALLOWED_HOSTS = new Set([
   'localhost',
 ]);
 
-const isForceEnabledForDev = (): boolean =>
+const isForceLocalRestApiEnabledForDev = (): boolean =>
   process.env.NODE_ENV === 'DEV' && process.env.SP_FORCE_LOCAL_REST_API === '1';
+
+const isForceDesktopCompanionEnabledForDev = (): boolean =>
+  process.env.NODE_ENV === 'DEV' && process.env.SP_FORCE_DESKTOP_COMPANION === '1';
 
 const handleHttpRequest = async (
   req: IncomingMessage,
@@ -277,8 +280,12 @@ export const initLocalRestApi = (): void => {
     warn('[local-rest-api] Server error', error);
   });
 
-  if (isForceEnabledForDev()) {
-    warn('[local-rest-api] Enabled by SP_FORCE_LOCAL_REST_API=1 for DEV runtime');
+  const isForceLocalRestApiEnabled = isForceLocalRestApiEnabledForDev();
+  const isForceDesktopCompanionEnabled = isForceDesktopCompanionEnabledForDev();
+  if (isForceLocalRestApiEnabled || isForceDesktopCompanionEnabled) {
+    warn('[local-rest-api] Enabled by DEV force flag');
+    isLocalRestApiEnabled = isForceLocalRestApiEnabled;
+    isDesktopCompanionEnabled = isForceDesktopCompanionEnabled;
     isEnabled = true;
     startServer();
   }
@@ -314,9 +321,10 @@ const stopServer = (): void => {
 };
 
 export const updateLocalRestApiConfig = (cfg: GlobalConfigState): void => {
-  const isForcedForDev = isForceEnabledForDev();
-  isLocalRestApiEnabled = isForcedForDev || !!cfg.misc.isLocalRestApiEnabled;
-  isDesktopCompanionEnabled = !!cfg.misc.isDesktopCompanionEnabled;
+  isLocalRestApiEnabled =
+    isForceLocalRestApiEnabledForDev() || !!cfg.misc.isLocalRestApiEnabled;
+  isDesktopCompanionEnabled =
+    isForceDesktopCompanionEnabledForDev() || !!cfg.misc.isDesktopCompanionEnabled;
   const nextEnabled = isLocalRestApiEnabled || isDesktopCompanionEnabled;
   if (nextEnabled === isEnabled) {
     if (nextEnabled && !isListening) {

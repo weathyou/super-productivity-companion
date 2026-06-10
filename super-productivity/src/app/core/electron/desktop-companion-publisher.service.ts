@@ -53,7 +53,9 @@ export class DesktopCompanionPublisherService {
           return;
         }
 
-        const isEnabled = !!this._globalConfigService.misc()?.isDesktopCompanionEnabled;
+        const isEnabled =
+          !!window.ea?.isDesktopCompanionForceEnabled?.() ||
+          !!this._globalConfigService.misc()?.isDesktopCompanionEnabled;
         const state = this._stateBuilder.state();
 
         if (!isEnabled) {
