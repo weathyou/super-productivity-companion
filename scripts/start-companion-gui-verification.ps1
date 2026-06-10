@@ -21,6 +21,37 @@ $LocalAppData = Join-Path $HomeDir "AppData\Local"
 $SuperProductivityUserData = Join-Path $SessionRoot "super-productivity-user-data"
 $LogDir = Join-Path $SessionRoot "logs"
 
+function Test-ElectronPackage {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $Root
+  )
+
+  $electronRoot = Join-Path $Root "node_modules\electron"
+  $pathFile = Join-Path $electronRoot "path.txt"
+  if (-not (Test-Path $electronRoot) -or -not (Test-Path $pathFile)) {
+    return $false
+  }
+
+  $relativePath = (Get-Content $pathFile -Raw).Trim()
+  if (-not $relativePath) {
+    return $false
+  }
+
+  return Test-Path (Join-Path (Join-Path $electronRoot "dist") $relativePath)
+}
+
+$missingDeps = @()
+if (-not (Test-ElectronPackage $ClawdRoot)) {
+  $missingDeps += "clawd-on-desk Electron dependency is missing or incomplete. Run: cd `"$ClawdRoot`"; npm.cmd ci"
+}
+if (-not (Test-ElectronPackage $SuperProductivityRoot)) {
+  $missingDeps += "super-productivity Electron dependency is missing or incomplete. Run: cd `"$SuperProductivityRoot`"; npm.cmd ci"
+}
+if ($missingDeps.Count) {
+  throw ($missingDeps -join [Environment]::NewLine)
+}
+
 New-Item -ItemType Directory -Force -Path `
   $HomeDir, `
   $AppData, `

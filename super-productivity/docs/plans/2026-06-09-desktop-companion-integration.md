@@ -689,4 +689,6 @@ Verification:
 - The launcher creates a temporary verification session with isolated `USERPROFILE`, `HOME`, `APPDATA`, `LOCALAPPDATA`, and a Super Productivity `--user-data-dir`.
 - It starts the Super Productivity Angular dev server, Super Productivity Electron app, and Clawd in visible PowerShell windows that share the temporary home directory, so Clawd's `~/.clawd/runtime.json` and Super Productivity's runtime discovery stay inside the verification session.
 - It writes a `manual-verification-checklist.md` and `pids.txt` into the temporary session root.
+- The launcher checks that each child project has a complete Electron install before opening windows. This catches half-installed `node_modules/electron` directories where `electron.exe` is missing.
 - PowerShell parser validation passed for the launcher script. The script is intended to make the remaining visible GUI verification safer by avoiding the user's real app data.
+- Launcher smoke on 2026-06-10 created an isolated session and Clawd wrote `~/.clawd/runtime.json` with port `23334`; `GET /state` on that port returned `{ ok: true, app: "clawd-on-desk" }`. Super Productivity `/health` stayed unavailable until the desktop companion setting is enabled in the temporary profile, so the visible checklist still needs to be completed manually.
