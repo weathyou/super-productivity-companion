@@ -4,6 +4,25 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $ClawdRoot = Join-Path $RepoRoot "clawd-on-desk"
 $SuperProductivityRoot = Join-Path $RepoRoot "super-productivity"
 
+function Test-PowerShellSyntax {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $Path
+  )
+
+  $parseErrors = $null
+  [System.Management.Automation.Language.Parser]::ParseFile(
+    $Path,
+    [ref] $null,
+    [ref] $parseErrors
+  ) | Out-Null
+
+  if ($parseErrors -and $parseErrors.Count) {
+    $parseErrors | Format-List * | Out-String | Write-Host
+    throw "PowerShell syntax check failed: $Path"
+  }
+}
+
 function Invoke-Step {
   param(
     [Parameter(Mandatory = $true)]
@@ -28,6 +47,11 @@ function Invoke-Step {
     Pop-Location
   }
 }
+
+Write-Host ""
+Write-Host "==> PowerShell verification script syntax"
+Test-PowerShellSyntax (Join-Path $RepoRoot "scripts\start-companion-gui-verification.ps1")
+Write-Host "PowerShell syntax OK"
 
 Invoke-Step `
   "Clawd companion bridge smoke" `

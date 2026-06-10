@@ -47,6 +47,7 @@ Phase 1 manual verification:
 
 Phase 2-4 manual verification still needed:
 
+- Use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\start-companion-gui-verification.ps1` from the integrated project root to launch Clawd, the Super Productivity Angular dev server, and the Super Productivity Electron app in an isolated temporary HOME/APPDATA/userData session for visible GUI verification.
 - Trigger Clawd menu commands against a running Super Productivity desktop app and confirm open app, open task, pause, resume, stop, complete, and quick add each cause one expected Super Productivity-owned state change.
 - Confirm reminder attention, overdue, finished-day, and compact day summary display in the real Clawd UI with real Super Productivity data.
 - Confirm the bridge still fails quietly when either desktop app is closed during Phase 2-4 command and display flows.
@@ -679,5 +680,13 @@ Verification:
 ## 2026-06-10 integrated verification gate
 
 - Added `scripts/verify-companion-integration.ps1` at the integrated project root.
-- The gate runs Clawd's companion bridge smoke test, Clawd's focused route/menu/command/state tests, Super Productivity Electron main-process tests, Super Productivity companion command handler specs, state builder specs, publisher specs, and `electron:build`.
+- The gate checks the isolated GUI verification launcher's PowerShell syntax, then runs Clawd's companion bridge smoke test, Clawd's focused route/menu/command/state tests, Super Productivity Electron main-process tests, Super Productivity companion command handler specs, state builder specs, publisher specs, and `electron:build`.
 - The gate passed locally on 2026-06-10 and is the preferred automated check before visible two-app GUI verification.
+
+## 2026-06-10 isolated GUI verification launcher
+
+- Added `scripts/start-companion-gui-verification.ps1` at the integrated project root.
+- The launcher creates a temporary verification session with isolated `USERPROFILE`, `HOME`, `APPDATA`, `LOCALAPPDATA`, and a Super Productivity `--user-data-dir`.
+- It starts the Super Productivity Angular dev server, Super Productivity Electron app, and Clawd in visible PowerShell windows that share the temporary home directory, so Clawd's `~/.clawd/runtime.json` and Super Productivity's runtime discovery stay inside the verification session.
+- It writes a `manual-verification-checklist.md` and `pids.txt` into the temporary session root.
+- PowerShell parser validation passed for the launcher script. The script is intended to make the remaining visible GUI verification safer by avoiding the user's real app data.
