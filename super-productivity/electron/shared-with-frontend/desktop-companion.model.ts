@@ -25,6 +25,11 @@ export interface ProductivityCompanionState {
     startedAt?: number;
     elapsedToday?: number;
   };
+  day?: {
+    plannedTaskCount: number;
+    completedTaskCount: number;
+    totalTrackedMs: number;
+  };
 }
 
 export interface ProductivityStateRequest {

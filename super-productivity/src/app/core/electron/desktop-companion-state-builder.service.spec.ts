@@ -33,6 +33,7 @@ describe('buildProductivityCompanionState', () => {
     expect(
       buildProductivityCompanionState({
         currentTask: null,
+        allTasks: [],
         today: '2026-06-09',
         isBreakActive: false,
         isTimerPaused: false,
@@ -43,6 +44,7 @@ describe('buildProductivityCompanionState', () => {
   it('maps a current task to working and includes phase 1 task context', () => {
     const state = buildProductivityCompanionState({
       currentTask: createTask(),
+      allTasks: [createTask()],
       today: '2026-06-09',
       isBreakActive: false,
       isTimerPaused: false,
@@ -62,12 +64,18 @@ describe('buildProductivityCompanionState', () => {
         isRunning: true,
         elapsedToday: 60000,
       },
+      day: {
+        plannedTaskCount: 1,
+        completedTaskCount: 0,
+        totalTrackedMs: 60000,
+      },
     });
   });
 
   it('lets break mode win over task display', () => {
     const state = buildProductivityCompanionState({
       currentTask: createTask(),
+      allTasks: [createTask()],
       today: '2026-06-09',
       isBreakActive: true,
       isTimerPaused: false,
@@ -80,6 +88,7 @@ describe('buildProductivityCompanionState', () => {
   it('maps a paused focus session with a current task to paused', () => {
     const state = buildProductivityCompanionState({
       currentTask: createTask(),
+      allTasks: [createTask()],
       today: '2026-06-09',
       isBreakActive: false,
       isTimerPaused: true,
@@ -88,10 +97,46 @@ describe('buildProductivityCompanionState', () => {
     expect(state.mode).toBe('paused');
     expect(state.timer?.isRunning).toBe(false);
   });
+
+  it('maps an overdue task to overdue when no task is active', () => {
+    const state = buildProductivityCompanionState({
+      currentTask: null,
+      allTasks: [createTask({ dueDay: '2026-06-08', timeSpentOnDay: {} })],
+      today: '2026-06-09',
+      isBreakActive: false,
+      isTimerPaused: false,
+    });
+
+    expect(state.mode).toBe('overdue');
+  });
+
+  it('maps a completed planned day to finishedDay and includes day summary', () => {
+    const state = buildProductivityCompanionState({
+      currentTask: null,
+      allTasks: [
+        createTask({
+          isDone: true,
+          dueDay: '2026-06-09',
+          timeSpentOnDay: { ['2026-06-09']: 120000 },
+        }),
+      ],
+      today: '2026-06-09',
+      isBreakActive: false,
+      isTimerPaused: false,
+    });
+
+    expect(state.mode).toBe('finishedDay');
+    expect(state.day).toEqual({
+      plannedTaskCount: 1,
+      completedTaskCount: 1,
+      totalTrackedMs: 120000,
+    });
+  });
 });
 
 describe('DesktopCompanionStateBuilderService', () => {
   let currentTask$: BehaviorSubject<Task | null>;
+  let allTasks$: BehaviorSubject<Task[]>;
   const isBreakActive = signal(false);
   const isSessionPaused = signal(false);
 
@@ -112,6 +157,7 @@ describe('DesktopCompanionStateBuilderService', () => {
 
   beforeEach(() => {
     currentTask$ = new BehaviorSubject<Task | null>(null);
+    allTasks$ = new BehaviorSubject<Task[]>([]);
     isBreakActive.set(false);
     isSessionPaused.set(false);
 
@@ -122,6 +168,7 @@ describe('DesktopCompanionStateBuilderService', () => {
           provide: TaskService,
           useValue: {
             currentTask$: currentTask$.asObservable(),
+            allTasks$: allTasks$.asObservable(),
           } as unknown as TaskService,
         },
         {
@@ -147,6 +194,7 @@ describe('DesktopCompanionStateBuilderService', () => {
     expect(service.state().mode).toBe('idle');
 
     currentTask$.next(createTask());
+    allTasks$.next([createTask()]);
 
     expect(service.state().mode).toBe('working');
     expect(service.state().currentTask?.title).toBe('Live task');

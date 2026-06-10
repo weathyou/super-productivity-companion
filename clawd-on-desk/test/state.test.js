@@ -3066,6 +3066,42 @@ describe("productivity companion state", () => {
     assert.strictEqual(api.getCurrentState(), "idle");
   });
 
+  it("maps phase 3 productivity attention modes to visual states", () => {
+    api.updateProductivityState({
+      source: "super-productivity",
+      schemaVersion: 1,
+      sentAt: Date.now(),
+      state: {
+        mode: "overdue",
+        day: {
+          plannedTaskCount: 2,
+          completedTaskCount: 0,
+          totalTrackedMs: 0,
+        },
+      },
+    }, { staleMs: 0 });
+
+    assert.strictEqual(api.getCurrentState(), "notification");
+
+    mock.timers.tick(10000);
+    api.updateProductivityState({
+      source: "super-productivity",
+      schemaVersion: 1,
+      sentAt: Date.now(),
+      state: {
+        mode: "finishedDay",
+        day: {
+          plannedTaskCount: 2,
+          completedTaskCount: 2,
+          totalTrackedMs: 120000,
+        },
+      },
+    }, { staleMs: 0 });
+
+    mock.timers.tick(5000);
+    assert.strictEqual(api.getCurrentState(), "attention");
+  });
+
   it("keeps productivity state separate from agent sessions and clears back to them", () => {
     update(api, {
       id: "agent-1",

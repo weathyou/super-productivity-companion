@@ -1,17 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TaskService } from '../../features/tasks/task.service';
-import {
-  Task,
-  TaskDetailTargetPanel,
-  TaskWithSubTasks,
-} from '../../features/tasks/task.model';
+import { Task, TaskWithSubTasks } from '../../features/tasks/task.model';
 import { TaskArchiveService } from '../../features/archive/task-archive.service';
 import { ProjectService } from '../../features/project/project.service';
 import { TagService } from '../../features/tag/tag.service';
 import { TODAY_TAG } from '../../features/tag/tag.const';
 import { DateService } from '../date/date.service';
 import { isTodayWithOffset } from '../../util/is-today.util';
+import { NavigateToTaskService } from '../../core-ui/navigate-to-task/navigate-to-task.service';
 import {
   LocalRestApiRequestPayload,
   LocalRestApiResponsePayload,
@@ -156,6 +153,7 @@ export class LocalRestApiHandlerService {
   private readonly _projectService = inject(ProjectService);
   private readonly _tagService = inject(TagService);
   private readonly _dateService = inject(DateService);
+  private readonly _navigateToTaskService = inject(NavigateToTaskService);
   private _isInitialized = false;
 
   init(): void {
@@ -343,7 +341,7 @@ export class LocalRestApiHandlerService {
     }
 
     if (type === 'openCurrentTask') {
-      this._taskService.setSelectedId(taskId, TaskDetailTargetPanel.Default);
+      await this._navigateToTaskService.navigate(taskId, false);
       return createSuccessResponse(requestId, 200, { taskId, command: type });
     }
 

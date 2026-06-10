@@ -67,6 +67,68 @@ module.exports = function initMenu(ctx) {
     };
   }
 
+  function getProductivitySnapshot() {
+    return typeof ctx.getProductivityState === "function" ? ctx.getProductivityState() : null;
+  }
+
+  function getProductivityCurrentTask() {
+    const snapshot = getProductivitySnapshot();
+    return snapshot && snapshot.state && snapshot.state.currentTask
+      ? snapshot.state.currentTask
+      : null;
+  }
+
+  function sendProductivityCommand(command) {
+    if (typeof ctx.sendCompanionCommand !== "function") return;
+    ctx.sendCompanionCommand(command).catch((err) => {
+      console.warn("Clawd: companion command failed:", err && err.message);
+    });
+  }
+
+  function buildProductivityCommandMenuItem() {
+    const snapshot = getProductivitySnapshot();
+    const task = getProductivityCurrentTask();
+    const taskId = task && typeof task.id === "string" ? task.id : null;
+    const mode = snapshot && snapshot.state ? snapshot.state.mode : null;
+    const isWorking = mode === "working";
+    const canTargetTask = !!taskId;
+    return {
+      label: "Super Productivity",
+      submenu: [
+        {
+          label: "Open Super Productivity",
+          click: () => sendProductivityCommand({ type: "openApp" }),
+        },
+        {
+          label: "Open Current Task",
+          enabled: canTargetTask,
+          click: () => sendProductivityCommand({ type: "openCurrentTask", taskId }),
+        },
+        { type: "separator" },
+        {
+          label: "Resume Current Task",
+          enabled: canTargetTask && !isWorking,
+          click: () => sendProductivityCommand({ type: "resumeCurrentTask", taskId }),
+        },
+        {
+          label: "Pause Current Task",
+          enabled: canTargetTask && isWorking,
+          click: () => sendProductivityCommand({ type: "pauseCurrentTask", taskId }),
+        },
+        {
+          label: "Stop Current Task",
+          enabled: canTargetTask,
+          click: () => sendProductivityCommand({ type: "stopCurrentTask", taskId }),
+        },
+        {
+          label: "Complete Current Task",
+          enabled: canTargetTask,
+          click: () => sendProductivityCommand({ type: "completeCurrentTask", taskId }),
+        },
+      ],
+    };
+  }
+
   // ── System tray ──
   function createTray() {
     if (ctx.tray) return;
@@ -108,6 +170,7 @@ module.exports = function initMenu(ctx) {
         label: ctx.doNotDisturb ? t("wake") : t("sleep"),
         click: () => ctx.doNotDisturb ? ctx.disableDoNotDisturb() : ctx.enableDoNotDisturb(),
       },
+      buildProductivityCommandMenuItem(),
       buildMiniModeMenuItem(),
       { type: "separator" },
       // Quick-toggle noise controls. Other settings (language, theme, bubble
@@ -323,6 +386,7 @@ module.exports = function initMenu(ctx) {
         label: ctx.doNotDisturb ? t("wake") : t("sleep"),
         click: () => ctx.doNotDisturb ? ctx.disableDoNotDisturb() : ctx.enableDoNotDisturb(),
       },
+      buildProductivityCommandMenuItem(),
       { type: "separator" },
       {
         label: t("openDashboard"),

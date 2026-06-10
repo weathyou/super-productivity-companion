@@ -1443,6 +1443,7 @@ const _serverCtx = {
   codexSubagentClassifier: agentRuntime.getCodexSubagentClassifier(),
   setState,
   updateProductivityState: (snapshot) => _state.updateProductivityState(snapshot),
+  getProductivityState: () => _state.getProductivityState(),
   updateSession: agentRuntime.updateSessionFromServer,
   resolvePermissionEntry,
   sendPermissionResponse,
@@ -2497,6 +2498,11 @@ const _menuCtx = {
   getDisableMiniMode: () => disableMiniModeCached,
   getMiniMode: () => _mini.getMiniMode(),
   getMiniTransitioning: () => _mini.getMiniTransitioning(),
+  getProductivityState: () => _state.getProductivityState(),
+  sendCompanionCommand: (command) => {
+    const { sendCompanionCommand } = require("./productivity-command-client");
+    return sendCompanionCommand(command);
+  },
   miniHandleResize: (sizeKey) => _mini.handleResize(sizeKey),
   checkForUpdates: (...args) => checkForUpdates(...args),
   getUpdateMenuItem: () => getUpdateMenuItem(),

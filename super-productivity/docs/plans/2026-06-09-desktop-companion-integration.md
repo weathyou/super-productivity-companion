@@ -1,7 +1,7 @@
 # Desktop Companion Integration
 
 **Date:** 2026-06-09
-**Status:** Phase 1 implemented and manually verified; Phase 2 command bridge started
+**Status:** Phase 1 implemented and manually verified; Phase 2 command bridge implemented; Phase 3 visual signals started
 **Scope:** Product and architecture plan for integrating Super Productivity with the Clawd desktop companion.
 
 ## Implementation progress
@@ -11,7 +11,9 @@ Updated on 2026-06-09:
 - Clawd endpoint and state sink exist at `POST /productivity-state`.
 - Clawd stores productivity snapshots separately from agent sessions.
 - Clawd maps productivity modes to display states and falls back after a stale timeout.
+- Clawd maps `overdue` to notification and `finishedDay` to attention for Phase 3 visual nudges.
 - Super Productivity has a Phase 1 snapshot builder for `mode`, `currentTask`, and `timer`.
+- Super Productivity snapshots now include a lightweight `day` summary and derive `overdue` / `finishedDay` modes when no task is active.
 - Super Productivity has an opt-in desktop-only setting for companion publishing.
 - Super Productivity publishes complete snapshots through a narrow Electron IPC bridge.
 - The Electron main process discovers Clawd through `~/.clawd/runtime.json` plus ports `23333-23337`, then posts to `/productivity-state`.
@@ -41,6 +43,19 @@ Super Productivity already owns the user's task, time tracking, planning, remind
 The intended combined product is not "Super Productivity sends another stream of agent-like events to Clawd." The intended model is a desktop productivity companion: Super Productivity is the source of truth, while Clawd is the lightweight desktop presentation and interaction layer.
 
 This plan is separate from `2026-06-08-plugin-hosted-integrations.md`. Plugin-hosted integrations are about extracting issue/calendar/file providers behind plugin contracts. Desktop companion integration is about reusing Clawd's desktop runtime with Super Productivity's own productivity state.
+
+## Repository boundary
+
+As of 2026-06-10, `D:\AI_coding\super-productivity-companion` is the integrated project root for this work.
+
+All future implementation, tests, docs, and verification notes for this integration should be made inside this project root:
+
+- Super Productivity code lives under `super-productivity/`.
+- Clawd companion runtime code lives under `clawd-on-desk/`.
+
+Do not implement follow-up integration work in the external historical Clawd checkout at `D:\AI_coding\clawd-on-desk`. If earlier notes mention that external path, treat them as pre-integration inventory references and migrate the relevant work into `clawd-on-desk/` inside this project before continuing.
+
+GitHub updates for this integration should use the repository rooted at `D:\AI_coding\super-productivity-companion`.
 
 ## Target model
 
@@ -301,14 +316,14 @@ Super Productivity state and command sources:
 
 Clawd presentation and companion runtime:
 
-- `D:\AI_coding\clawd-on-desk\src\main.js` for Electron windows, lifecycle, and IPC.
-- `D:\AI_coding\clawd-on-desk\src\state.js` for the current visual state machine.
-- `D:\AI_coding\clawd-on-desk\src\renderer.js` for animation rendering.
-- `D:\AI_coding\clawd-on-desk\src\tick.js` for mouse/idle visual loop behavior.
-- `D:\AI_coding\clawd-on-desk\src\hit-renderer.js`, `src\hit-geometry.js`, and `src\drag-position.js` for interaction and dragging.
-- `D:\AI_coding\clawd-on-desk\src\mini.js` for mini mode.
-- `D:\AI_coding\clawd-on-desk\src\theme-loader.js` and `themes\` for theme support.
-- `D:\AI_coding\clawd-on-desk\src\server.js` and `src\server-route-state.js` for the existing local state input model.
+- `clawd-on-desk/src/main.js` for Electron windows, lifecycle, and IPC.
+- `clawd-on-desk/src/state.js` for the current visual state machine.
+- `clawd-on-desk/src/renderer.js` for animation rendering.
+- `clawd-on-desk/src/tick.js` for mouse/idle visual loop behavior.
+- `clawd-on-desk/src/hit-renderer.js`, `clawd-on-desk/src/hit-geometry.js`, and `clawd-on-desk/src/drag-position.js` for interaction and dragging.
+- `clawd-on-desk/src/mini.js` for mini mode.
+- `clawd-on-desk/src/theme-loader.js` and `clawd-on-desk/themes/` for theme support.
+- `clawd-on-desk/src/server.js` and `clawd-on-desk/src/server-route-state.js` for the existing local state input model.
 
 ## Phase 0 discovery checklist
 
@@ -356,13 +371,13 @@ Super Productivity:
 
 Clawd:
 
-- `D:\AI_coding\clawd-on-desk\src\server.js`
+- `clawd-on-desk/src/server.js`
   - Existing local server routes `GET /state` and `POST /state`.
-- `D:\AI_coding\clawd-on-desk\src\server-route-state.js`
+- `clawd-on-desk/src/server-route-state.js`
   - `handleStatePost(...)` parses agent-oriented state payloads.
   - `/state` currently expects fields such as `state`, `session_id`, `event`, `agent_id`, `hook_source`, `tool_name`, and process metadata.
   - This confirms that a new `/productivity-state` endpoint is preferable to overloading `/state`.
-- `D:\AI_coding\clawd-on-desk\src\state.js`
+- `clawd-on-desk/src/state.js`
   - `setState(...)`, `applyState(...)`, and `resolveDisplayState(...)` are the key visual state functions.
   - Existing session state lives in a `sessions` map and should not be mixed with productivity snapshots.
   - Current public runtime exports include `getCurrentState()`, `getCurrentSvg()`, `STATE_SVGS`, and `sessions`.
@@ -511,6 +526,7 @@ Add explicit commands from Clawd back to Super Productivity.
 
 Scope:
 
+- Open/focus Super Productivity.
 - Pause/resume timer.
 - Stop current task.
 - Complete current task.
@@ -528,7 +544,8 @@ Add visual attention for reminders, overdue tasks, and finish-day summary.
 
 Scope:
 
-- Reminder/overdue visual state.
+- Reminder visual state.
+- Overdue visual state.
 - Finish-day celebration or wrap-up.
 - Optional quiet behavior during focus mode.
 
@@ -599,6 +616,19 @@ Verification:
 - The local server may start for companion commands without enabling the broader local REST API surface.
 - `openApp` focuses Super Productivity through the Electron main process and performs no task mutation.
 - `openCurrentTask`, `resumeCurrentTask`, `pauseCurrentTask`, `stopCurrentTask`, and `completeCurrentTask` are handled by Super Productivity-owned task services.
+- `openCurrentTask` uses Super Productivity's `NavigateToTaskService` so companion requests route to the task's project/tag/today context and focus the task, instead of only selecting the task detail panel.
 - Current-task mutation commands reject stale `taskId` values when the command target no longer matches the active task.
-- Clawd now has a small command client for `http://127.0.0.1:3876/companion-command`.
-- Clawd tray and pet context menus expose a Super Productivity command submenu based on the latest productivity snapshot.
+- Clawd command client work should live at `clawd-on-desk/src/productivity-command-client.js` inside this integrated project.
+- Clawd tray and pet context menu work should live in `clawd-on-desk/src/menu.js` inside this integrated project.
+- Any earlier Clawd-side edits made in an external checkout should be ported into `D:\AI_coding\super-productivity-companion\clawd-on-desk` before further Phase 2 work continues.
+- The Clawd command client and Super Productivity menu entries have been migrated into the integrated project and covered by focused Node menu/client tests.
+
+## 2026-06-10 Phase 3 checkpoint
+
+- Super Productivity desktop companion snapshots include `day.plannedTaskCount`, `day.completedTaskCount`, and `day.totalTrackedMs`.
+- When no task is active, Super Productivity derives `overdue` if any active task is due or has a deadline before the logical today string.
+- When no task is active and all planned/touched tasks for the logical day are complete, Super Productivity derives `finishedDay`.
+- Active work, paused work, and break mode still take precedence over overdue and finished-day visual nudges.
+- Clawd preserves the `day` summary from `/productivity-state`.
+- Clawd maps `overdue` to `notification` and `finishedDay` to `attention`; existing theme minimum-display behavior can delay lower-priority visual transitions briefly.
+- Focused Super Productivity builder specs, local companion command specs, Clawd productivity route/state/menu/client tests, and `electron:build` passed after these changes.

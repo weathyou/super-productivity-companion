@@ -65,6 +65,11 @@ describe("sanitizeProductivityState", () => {
         isRunning: true,
         elapsedToday: 120000,
       },
+      day: {
+        plannedTaskCount: 3,
+        completedTaskCount: 2,
+        totalTrackedMs: 240000,
+      },
       ignored: "field",
     });
 
@@ -78,6 +83,11 @@ describe("sanitizeProductivityState", () => {
       timer: {
         isRunning: true,
         elapsedToday: 120000,
+      },
+      day: {
+        plannedTaskCount: 3,
+        completedTaskCount: 2,
+        totalTrackedMs: 240000,
       },
     });
   });

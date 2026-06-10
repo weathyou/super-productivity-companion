@@ -73,6 +73,25 @@ function sanitizeTimer(value) {
   return out;
 }
 
+function sanitizeDay(value) {
+  if (!isPlainObject(value)) return undefined;
+  const plannedTaskCount = sanitizeNumber(value.plannedTaskCount);
+  const completedTaskCount = sanitizeNumber(value.completedTaskCount);
+  const totalTrackedMs = sanitizeNumber(value.totalTrackedMs);
+  if (
+    plannedTaskCount === undefined || plannedTaskCount < 0
+    || completedTaskCount === undefined || completedTaskCount < 0
+    || totalTrackedMs === undefined || totalTrackedMs < 0
+  ) {
+    return undefined;
+  }
+  return {
+    plannedTaskCount,
+    completedTaskCount,
+    totalTrackedMs,
+  };
+}
+
 function sanitizeProductivityState(value) {
   if (!isPlainObject(value)) return null;
   const mode = sanitizeString(value.mode, 40);
@@ -82,6 +101,8 @@ function sanitizeProductivityState(value) {
   if (currentTask) out.currentTask = currentTask;
   const timer = sanitizeTimer(value.timer);
   if (timer) out.timer = timer;
+  const day = sanitizeDay(value.day);
+  if (day) out.day = day;
   return out;
 }
 

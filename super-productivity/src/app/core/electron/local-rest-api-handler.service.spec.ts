@@ -10,13 +10,13 @@ import { DateService } from '../date/date.service';
 import {
   Task,
   TaskArchive,
-  TaskDetailTargetPanel,
   TaskWithSubTasks,
 } from '../../features/tasks/task.model';
 import {
   LocalRestApiRequestPayload,
   LocalRestApiResponsePayload,
 } from '../../../../electron/shared-with-frontend/local-rest-api.model';
+import { NavigateToTaskService } from '../../core-ui/navigate-to-task/navigate-to-task.service';
 
 describe('LocalRestApiHandlerService', () => {
   let service: LocalRestApiHandlerService;
@@ -25,6 +25,7 @@ describe('LocalRestApiHandlerService', () => {
   let projectServiceMock: jasmine.SpyObj<ProjectService>;
   let tagServiceMock: jasmine.SpyObj<TagService>;
   let dateServiceMock: jasmine.SpyObj<DateService>;
+  let navigateToTaskServiceMock: jasmine.SpyObj<NavigateToTaskService>;
   let requestHandler: ((payload: LocalRestApiRequestPayload) => void) | null = null;
   let responsePromiseResolve: ((response: LocalRestApiResponsePayload) => void) | null =
     null;
@@ -116,7 +117,6 @@ describe('LocalRestApiHandlerService', () => {
         'update',
         'remove',
         'setCurrentId',
-        'setSelectedId',
         'pauseCurrent',
         'setDone',
         'moveToArchive',
@@ -167,6 +167,12 @@ describe('LocalRestApiHandlerService', () => {
     dateServiceMock.todayStr.and.returnValue('2026-05-12');
     dateServiceMock.getStartOfNextDayDiffMs.and.returnValue(0);
 
+    navigateToTaskServiceMock = jasmine.createSpyObj<NavigateToTaskService>(
+      'NavigateToTaskService',
+      ['navigate'],
+    );
+    navigateToTaskServiceMock.navigate.and.returnValue(Promise.resolve());
+
     TestBed.configureTestingModule({
       providers: [
         LocalRestApiHandlerService,
@@ -175,6 +181,7 @@ describe('LocalRestApiHandlerService', () => {
         { provide: ProjectService, useValue: projectServiceMock },
         { provide: TagService, useValue: tagServiceMock },
         { provide: DateService, useValue: dateServiceMock },
+        { provide: NavigateToTaskService, useValue: navigateToTaskServiceMock },
       ],
     });
 
@@ -1113,7 +1120,7 @@ describe('LocalRestApiHandlerService', () => {
       expect(taskServiceMock.setDone).not.toHaveBeenCalled();
     });
 
-    it('selects the current task for openCurrentTask', async () => {
+    it('navigates to the current task for openCurrentTask', async () => {
       service.init();
 
       const response = await sendRequestAndWait(
@@ -1123,10 +1130,7 @@ describe('LocalRestApiHandlerService', () => {
       );
 
       expect(response.status).toBe(200);
-      expect(taskServiceMock.setSelectedId).toHaveBeenCalledWith(
-        'task-1',
-        TaskDetailTargetPanel.Default,
-      );
+      expect(navigateToTaskServiceMock.navigate).toHaveBeenCalledWith('task-1', false);
     });
 
     it('resumes a valid task', async () => {

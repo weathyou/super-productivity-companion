@@ -65,6 +65,100 @@ function buildBaseCtx(overrides = {}) {
 }
 
 describe("menu send-to-display", () => {
+  function makeFakeElectron(displays = [{ id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }]) {
+    return {
+      app: { quit: () => {}, setActivationPolicy: () => {}, dock: { show: () => {}, hide: () => {} } },
+      BrowserWindow: function BrowserWindow() {},
+      Menu: {
+        buildFromTemplate(template) {
+          return { template };
+        },
+      },
+      Tray: function Tray() {},
+      nativeImage: {
+        createFromPath() {
+          return {
+            resize() { return this; },
+            setTemplateImage() {},
+          };
+        },
+      },
+      screen: {
+        getAllDisplays: () => displays,
+        getCursorScreenPoint: () => ({ x: 0, y: 0 }),
+        getDisplayNearestPoint: () => displays[0],
+      },
+    };
+  }
+
+  it("adds Super Productivity commands to the context menu", () => {
+    const initMenu = loadMenuWithElectron(makeFakeElectron());
+    const commands = [];
+    const ctx = buildBaseCtx({
+      getProductivityState: () => ({
+        state: {
+          mode: "working",
+          currentTask: { id: "task-1", title: "Demo task" },
+        },
+      }),
+      sendCompanionCommand: (command) => {
+        commands.push(command);
+        return Promise.resolve({ ok: true });
+      },
+    });
+
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+
+    const item = ctx.contextMenu.template.find((entry) => entry.label === "Super Productivity");
+    assert.ok(item, "context menu should expose Super Productivity commands");
+    const openApp = item.submenu.find((entry) => entry.label === "Open Super Productivity");
+    const pause = item.submenu.find((entry) => entry.label === "Pause Current Task");
+    const resume = item.submenu.find((entry) => entry.label === "Resume Current Task");
+    const complete = item.submenu.find((entry) => entry.label === "Complete Current Task");
+
+    assert.strictEqual(openApp.enabled, undefined);
+    assert.strictEqual(pause.enabled, true);
+    assert.strictEqual(resume.enabled, false);
+    assert.strictEqual(complete.enabled, true);
+
+    openApp.click();
+    pause.click();
+    complete.click();
+
+    assert.deepStrictEqual(commands, [
+      { type: "openApp" },
+      { type: "pauseCurrentTask", taskId: "task-1" },
+      { type: "completeCurrentTask", taskId: "task-1" },
+    ]);
+  });
+
+  it("keeps task commands disabled when no productivity task is available", () => {
+    const initMenu = loadMenuWithElectron(makeFakeElectron());
+    const commands = [];
+    const ctx = buildBaseCtx({
+      getProductivityState: () => ({ state: { mode: "idle" } }),
+      sendCompanionCommand: (command) => {
+        commands.push(command);
+        return Promise.resolve({ ok: true });
+      },
+    });
+
+    const menu = initMenu(ctx);
+    menu.buildContextMenu();
+
+    const item = ctx.contextMenu.template.find((entry) => entry.label === "Super Productivity");
+    assert.ok(item, "context menu should expose Super Productivity commands");
+    const openApp = item.submenu.find((entry) => entry.label === "Open Super Productivity");
+    const taskItems = item.submenu.filter((entry) => entry.label && entry.label !== "Open Super Productivity");
+
+    assert.strictEqual(openApp.enabled, undefined);
+    assert.ok(taskItems.every((entry) => entry.enabled === false));
+
+    openApp.click();
+    assert.deepStrictEqual(commands, [{ type: "openApp" }]);
+  });
+
   it("disables mini entry when mini mode is disabled while keeping exit available", () => {
     const fakeElectron = {
       app: { quit: () => {}, setActivationPolicy: () => {}, dock: { show: () => {}, hide: () => {} } },
